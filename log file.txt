@@ -1,0 +1,25 @@
+did not work with 5 groups and the following prior:
+
+sig2.b0k=0.1
+lambda=0.1
+tmp=exp(-lambda*1:ncomm)
+tmp=tmp-min(tmp) #from 0
+tmp=tmp/max(tmp) #to 1
+mu.k=20*tmp
+#-------------------------------------------------
+check if code works assuming true number of groups and in the absence of strong priors: yes it works
+#-------------------------------------------------
+3 communities are identified well. 4th and 5th communities are mixed. 
+
+Is this a sign that the prior is too strong or two weak? 
+
+This is probably a prior that is too strong given that it is preferable to have 2 b0k that are relatively small than one big and one small b0k 
+#-------------------------------------------------
+Can we estimate gamma (the exponential decay parameter that governs the prior variance?)
+
+Make gamma discrete so that we can sample from multinomial distribution
+#-------------------------------------------------
+The normal stick breaking prior seems to work with sig2=3.9 and betas=6.93 but there is a lot of noise on superfluous groups
+
+The normal stick breaking prior does not work with estimated sig2 but fixed betas=6.93
+
