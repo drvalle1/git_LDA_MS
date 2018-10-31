@@ -1,4 +1,5 @@
-table(gamma.out)
+table(jump1$delta)
+boxplot(jump1$delta)
 
 boxplot(theta)
 

@@ -1,0 +1,8 @@
+Oct 31
+
+When I use probit formulation, I have to sample omega|delta and delta|omega
+
+The problem of this is that, when I sample omega|delta, a generate random variables from truncated normal distributions, where the truncation limits depend on the value of z_il. The problem is that even if we have tons of positive omegas and only a few negative omegas, depending on the value of the corresponding delta, we might end up with positive omegas equal to a bunch of zeroes (the lower bound) and some relatively large negative omegas
+
+As a result, when I then do delta|omega, delta is likely to be relatively negative, which is definitively not what the data suggests it should be.
+#-----------------------------------------

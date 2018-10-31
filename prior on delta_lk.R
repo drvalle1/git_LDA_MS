@@ -2,10 +2,12 @@ rm(list=ls(all=TRUE))
 gamma=0.1
 
 expected.fun=function(x){
-  pnorm(x)*dnorm(x,mean=mu,sd=sd1)
+  tmp=1/(1+exp(-x))
+  tmp*dnorm(x,mean=mu,sd=sd1)
 }
 var.fun=function(x){
-  ((pnorm(x)-expected)^2)*dnorm(x,mean=mu,sd=sd1)
+  tmp=1/(1+exp(-x))
+  ((tmp-expected)^2)*dnorm(x,mean=mu,sd=sd1)
 }
 
 combo=expand.grid(mu=seq(from=0.01,to=5,length.out=100),
@@ -41,10 +43,10 @@ combo1[ind,]
 
 #compare distributions
 mu=combo1$mu[ind] #5
-sd1=combo1$sd1[ind] #3.6391
+sd1=combo1$sd1[ind] #3.286
 n=100000
 z=rnorm(n,mean=mu,sd=sd1)
-z1=pnorm(z)
+z1=1/(1+exp(-z))
 mean(z1); var(z1)
 expected; var1
 
