@@ -22,4 +22,12 @@ Make gamma discrete so that we can sample from multinomial distribution
 The normal stick breaking prior seems to work with sig2=3.9 and betas=6.93 but there is a lot of noise on superfluous groups
 
 The normal stick breaking prior does not work with estimated sig2 but fixed betas=6.93
+#----------------------------------------------------------------
+Sept 19
+
+My approximation to the stick breaking prior using the KL divergence criteria did not work very well
+
+it does NOT work very well for 3 groups
+it does NOT work very well for 5 groups
+
 

@@ -8,75 +8,25 @@ using namespace Rcpp;
 /*********************************                      UTILS          *****************************************************/
 /***************************************************************************************************************************/
 
-//' This function converts vmat into theta
+// This function makes multinomial draws
 // [[Rcpp::export]]
-NumericMatrix convertVtoTheta(NumericMatrix vmat,
-                                NumericVector prod) {
-  NumericMatrix res(vmat.nrow(),vmat.ncol());
-  NumericVector prod1=clone(prod);
+IntegerVector rmultinom1(NumericVector runif1, NumericVector prob, int ncommun) {
+  IntegerVector res(ncommun);
+  double probcum = prob(0);
   
-  for(int j=0; j<vmat.ncol();j++){
-    res(_,j)=vmat(_,j)*prod1;    
-    prod1=prod1*(1-vmat(_,j));
-  }
+  NumericVector runif2 = Rcpp::clone(runif1);
+  runif2.sort(false);
+  int oo=0;
   
-  return (res);
-}
-
-//' This function summarizes the z matrix into 2 K x S matrices
-//' where K is the number of communities and S is the number of species.
-//' The matrix "res1" holds the values for dat=1
-//' The matrix "res0" holds the values for dat=0
-// [[Rcpp::export]]
-Rcpp::List getks(IntegerMatrix z, int ncommun, IntegerMatrix dat) {
-  int nspp=z.ncol();
-  int nlinhas=z.nrow();
-  IntegerMatrix res1(ncommun,nspp);
-  IntegerMatrix res0(ncommun,nspp);
-  
-  for(int i=0; i<nlinhas;i++){
-    for (int j=0; j<nspp; j++){
-      if (dat(i,j)==1) {
-        res1(z(i,j)-1,j)=res1(z(i,j)-1,j)+1;
+  for (int i = 0; i < runif2.length(); i++) {
+    if (runif2(i)< probcum){
+      res(oo)=res(oo)+1;
+    } else {
+      while (runif2(i)>probcum){
+        oo=oo+1;
+        probcum = probcum + prob(oo);  
       }
-      if (dat(i,j)==0){
-        res0(z(i,j)-1,j)=res0(z(i,j)-1,j)+1;
-      }
-    }
-  }
-  
-  Rcpp::List resTemp = Rcpp::List::create(Rcpp::Named("nks1") = res1,
-                                          Rcpp::Named("nks0") = res0);
-  return(resTemp);
-}
-
-//' This function summarizes the z matrix into a L x K matrix
-//' where K is the number of communities and L is the number of locations
-// [[Rcpp::export]]
-IntegerMatrix getlk(IntegerMatrix z, IntegerVector locid, int ncommun, int nloc) {
-  int nlinhas=z.nrow();
-  int nspp=z.ncol();
-  IntegerMatrix res(nloc,ncommun);
-  
-  for(int i=0; i<nlinhas;i++){
-    for (int j=0; j<nspp; j++){
-      res(locid[i]-1,z(i,j)-1)=res(locid[i]-1,z(i,j)-1)+1;
-    }
-  }
-  
-  return(res);
-}
-
-// This function helps with multinomial draws
-int whichLessDVPresence(double value, NumericVector prob) {
-  int res=-1;
-  double probcum = 0;
-  
-  for (int i = 0; i < prob.length(); i++) {
-    probcum = probcum + prob(i);
-    if (value < probcum) {
-      res = i;
-      break;
+      res(oo)=res(oo)+1;
     }
   }
   return res;
@@ -84,27 +34,58 @@ int whichLessDVPresence(double value, NumericVector prob) {
 
 //' This function samples z's
 // [[Rcpp::export]]
-IntegerMatrix samplez(NumericMatrix ltheta, NumericMatrix l1minustheta, NumericMatrix lphi, 
-                      IntegerMatrix dat1, IntegerMatrix minus_dat1, IntegerVector locid,
-                      NumericMatrix randu, int ncommun, int nloc) {
+List samplez(NumericMatrix theta, NumericMatrix phi, IntegerMatrix y, int ncommun, int nloc, int nspp) {
   
-  IntegerMatrix zmat(dat1.nrow(),dat1.ncol());
+  IntegerMatrix nlk(nloc,ncommun);
+  IntegerMatrix nks(ncommun,nspp);
+  
   NumericVector prob(ncommun);
-  int znew;
+  IntegerVector znew(ncommun);
   
-  for(int i=0; i<dat1.nrow();i++){
-    for (int j=0; j<dat1.ncol(); j++){
+  for(int i=0; i<nloc; i++){
+    for (int j=0; j<nspp; j++){
       for (int k=0; k<ncommun; k++){
-        prob(k)=ltheta(locid(i)-1,k)+dat1(i,j)*lphi(k,j)+minus_dat1(i,j)*l1minustheta(k,j);
+        prob(k)=theta(i,k)*phi(k,j);
       }
-      prob=prob-max(prob);
-      prob=exp(prob);
       prob=prob/sum(prob);
 
       //multinomial draw
-      znew=whichLessDVPresence(randu(i,j),prob);
-      zmat(i,j)=znew+1;
+      znew=rmultinom1(runif(y(i,j)),prob,ncommun);
+      
+      //add to results to export
+      nlk(i,_)=nlk(i,_)+znew;
+      nks(_,j)=nks(_,j)+znew;
     }
   }
-  return zmat;
+  return List::create(Named("nlk") = nlk,
+                      Named("nks") = nks);
+}
+
+//' This function converts vmat into theta
+// [[Rcpp::export]]
+NumericMatrix convertVtoTheta(NumericMatrix vmat,
+                                NumericVector prod) {
+  NumericMatrix res(vmat.nrow(),vmat.ncol());
+  
+  for(int j=0; j<vmat.ncol();j++){
+    res(_,j)=vmat(_,j)*prod;    
+    prod=prod*(1-vmat(_,j));
+  }
+  
+  return (res);
+}
+
+//' This function calculates ngreater
+// [[Rcpp::export]]
+IntegerMatrix ngreater(IntegerMatrix nlk,int nloc, int ncommun){
+  IntegerMatrix ngreater(nloc,ncommun);
+  int oo=ncommun-1;
+  IntegerVector tmp(nloc);
+
+  while (oo>=0){
+    tmp=tmp+nlk(_,oo);
+    ngreater(_,oo)=tmp;
+    oo=oo-1;
+  }
+  return ngreater;
 }
