@@ -6,6 +6,3 @@ The problem of this is that, when I sample omega|delta, a generate random variab
 
 As a result, when I then do delta|omega, delta is likely to be relatively negative, which is definitively not what the data suggests it should be.
 #-----------------------------------------
-Nov 7th
-
-Can the bad results be due to a relatively strong prior on betas?

@@ -1,33 +1,70 @@
 rm(list=ls(all=TRUE))
+library('Rcpp')
 set.seed(4)
+
+setwd('U:\\GIT_models\\git_LDA_MS')
+sourceCpp('aux1.cpp')
 
 nloc=1000
 nspp=100
-ncommun=5
-base=floor(nloc/(ncommun-2))
+ncommun=4
+mu=0
+sd1=0.1
+sig2=sd1^2  
+
+#generate covariates
+tmp1=c(seq(from=2,to=0,length.out=nloc/2),rep(0,nloc*1/2))
+tmp2=c(rep(0,nloc/8),seq(from=0,to=2,length.out=nloc/8),seq(from=2,to=0,length.out=nloc/8),rep(0,nloc*5/8))
+tmp3=c(rep(0,nloc/4),seq(from=0,to=2,length.out=nloc/8),seq(from=2,to=0,length.out=nloc/8),rep(0,nloc*4/8))
+xmat=cbind(tmp1,tmp2,tmp3)
+colnames(xmat)=paste('cov',1:(ncommun-1),sep='')
+
+#look at xmat
+plot(NA,NA,ylim=range(xmat),xlim=c(1,nloc))
+for (i in 1:ncol(xmat)) lines(1:nloc,xmat[,i],col=i)
+
+#generate betas
+seq1=c(2,3,2)
+betas=diag(seq1,ncommun-1)
+betas[betas==0]=-3
+betas.true=betas
+
+#generate deltas
+tmp=rnorm(nloc*(ncommun-1),mean=mu+xmat%*%betas,sd=sd1)
+delta.true=delta=matrix(tmp,nloc,ncommun-1)
+range(delta) #this is important: defines truncation points
 
 #generate thetas
-x=seq(from=-1,to=1,length.out=base)
-y=sqrt(1-(x^2))*0.1
-min1=0.0001
-y[y<min1]=min1
-# plot(x,y)
-  
-init=floor(nloc/ncommun)
-seq1=c(seq(from=1,to=nloc,by=init),nloc)
-  
-theta=matrix(min1,nloc,ncommun)
-for (i in 1:ncommun){
-  seq2=seq1[i]:(seq1[i]+base-1)
-  seq3=seq2[seq2<=nloc]
-  theta[seq3,i]=y[1:length(seq3)]
+prob=1/(1+exp(-delta))
+vmat=cbind(prob,1)
+theta.true=theta=convertVtoTheta(vmat,rep(1,nloc))
+boxplot(theta) #this is important: it determines if the model will be able to disentagle these groups
+
+#create true curves
+par(mfrow=c(2,2),mar=rep(2,4))
+rango=range(xmat)
+nsim=1000
+ncov.val=500
+seq1=seq(from=rango[1],to=rango[2],length.out=ncov.val)
+for (i in 1:(ncommun-1)){
+  x=matrix(0,ncov.val,ncommun-1)
+  x[,i]=seq1
+  media=mu+x%*%betas
+  res=matrix(NA,ncov.val,nsim)
+  for (j in 1:nsim){
+    tmp=rnorm(ncov.val*(ncommun-1),mean=media,sd=sd1)
+    delta=matrix(tmp,ncov.val,ncommun-1)
+    prob=1/(1+exp(-delta))
+    vmat=cbind(prob,1)
+    tmp=convertVtoTheta(vmat,rep(1,nloc))
+    res[,j]=tmp[,i]
+  }
+  res1=apply(res,1,quantile,c(0.025,0.5,0.975))
+  plot(seq1,res1[2,],ylim=c(0,1))
+  lines(seq1,res1[1,],lty=3)
+  lines(seq1,res1[3,],lty=3)
 }
-theta=theta/matrix(apply(theta,1,sum),nloc,ncommun)
-theta.true=theta
-  
-plot(NA,NA,xlim=c(0,nloc),ylim=c(0,1))
-for (i in 1:ncommun) lines(1:nloc,theta[,i],col=i)
-  
+
 #generate phi  
 tmp=matrix(rnorm(ncommun*nspp,mean=0,sd=2),ncommun,nspp)
 tmp[tmp<0.1]=0.1
@@ -68,7 +105,9 @@ nks.true=nks
 
 #export results
 setwd('U:\\GIT_models\\git_LDA_MS')
-nome=paste('fake data',ncommun,'.csv',sep='')    
+nome=paste(c('fake data','fake data cov'),ncommun,'.csv',sep='')    
 colnames(y)=paste('spp',1:nspp,sep='')
 rownames(y)=paste('loc',1:nloc,sep='')
-write.csv(y,nome)    
+write.csv(y,nome[1])
+write.csv(xmat,nome[2],row.names=F)    
+

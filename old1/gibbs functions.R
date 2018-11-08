@@ -1,5 +1,3 @@
-#this function adjusts the jump parameter in MH algorithm
-#with the goal of achieving an acceptance rate between 0.2 and 0.4
 print.adapt = function(accept1z,jump1z,accept.output){
   accept1=accept1z; jump1=jump1z; 
   
@@ -20,15 +18,12 @@ print.adapt = function(accept1z,jump1z,accept.output){
   return(list(jump1=jump1,accept1=accept1))
 }
 #----------------------------
-#this function calculates a correction in the MH acceptance probability
-#associated with using a truncated normal as a proposal distribution
 fix.MH=function(lo,hi,old1,new1,jump){
   jold=pnorm(hi,mean=old1,sd=jump)-pnorm(lo,mean=old1,sd=jump)
   jnew=pnorm(hi,mean=new1,sd=jump)-pnorm(lo,mean=new1,sd=jump)
   log(jold)-log(jnew) #add this to pnew
 }
 #----------------------------------------------------------------------------------------------
-#accepts or rejects based on MH algorithm
 acceptMH <- function(p0,p1,x0,x1){   #accept for M, M-H
 
   nz           <- length(x0)  #no. to accept
@@ -54,29 +49,19 @@ tnorm <- function(n,lo,hi,mu,sig){
   z
 }
 #-----------------------------------------
-#this function samples delta
-#which then generates vmat, 
-#which is then used to generate the theta matrix
-get.delta.theta=function(nlk,gamma,ncomm,nloc,delta,sig2,mu,jump,xmat,betas,
-                         delta.lo,delta.hi){
-  #calculate the number of individuals in groups greater than k
-  ngreater1=ngreater(nlk,nloc,ncomm) 
-
-  #propose new deltas  
+#this function generates vmat, which is then used to generate the theta matrix
+get.delta.theta=function(nlk,gamma,ncomm,nloc,delta,sig2,mu,jump){
+  ngreater1=ngreater(nlk,nloc,ncomm)
   delta.new=delta.old=delta
-  tmp=tnorm(nloc*(ncomm-1),lo=delta.lo,hi=delta.hi,mu=delta.old,sig=jump) 
+  tmp=tnorm(nloc*(ncomm-1),lo=-5,hi=5,mu=delta.old,sig=jump) #need to adjust acceptance prob
   proposed=matrix(tmp,nloc,ncomm-1)
-  #calculate correction factor to MH acceptance probability because we used 
-  #a truncated normal distribution as a proposal distribution
-  fix.TN=fix.MH(lo=delta.lo,hi=delta.hi,old1=delta.old,new1=proposed,jump=jump)
+  fix.TN=fix.MH(lo=-5,hi=5,old1=delta.old,new1=proposed,jump=jump)
   
   #pre-calculate stuff
   calc.old=log(1+exp(-delta.old))
   calc.new=log(1+exp(-proposed))
-  media=mu+xmat%*%betas
-  calc.old1=(1/(2*sig2))*((delta.old-media)^2)
-  calc.new1=(1/(2*sig2))*((proposed-media)^2)
-
+  calc.old1=(1/(2*sig2))*((delta.old-mu)^2)
+  calc.new1=(1/(2*sig2))*((proposed-mu)^2)
   for (i in 1:(ncomm-1)){
     delta.new=delta.old
     delta.new[,i]=proposed[,i]
@@ -88,27 +73,15 @@ get.delta.theta=function(nlk,gamma,ncomm,nloc,delta,sig2,mu,jump,xmat,betas,
     #accept MH piece
     delta.old[,i]=acceptMH(p0=pold,p1=pnew+fix.TN[,i],x0=delta.old[,i],x1=delta.new[,i])
   }
-  
-  #get corresponding vmat matrix
   prob=1/(1+exp(-delta.old))
   vmat=cbind(prob,1)
-  #convert vmat matrix to theta matrix
   theta=convertVtoTheta(vmat,rep(1,nloc))
   list(theta=theta,delta=delta.old,accept=delta!=delta.old)  
 }
-#-----------------------------------------
+
 #this function generates dirichlet random variables (1 one for each row of alpha)
 rdirichlet1=function(alpha,ncomm,nspp){
   tmp=matrix(rgamma(n=ncomm*nspp,alpha,1),ncomm,nspp)
   soma=matrix(rowSums(tmp),ncomm,nspp)
   tmp/soma
-}
-#-----------------------------------------
-#this function samples the regression slope parameters
-get.betas=function(var.betas,sig2,tx,delta,mu,npar,ncomm){
-  err=delta-mu
-  pmedia=(1/sig2)*tx%*%err
-  media=var.betas%*%pmedia
-  tmp=rmvnorm(ncomm-1,mean=rep(0,npar),sig=var.betas)
-  t(tmp)+media
 }

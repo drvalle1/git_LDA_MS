@@ -1,6 +1,5 @@
 # rm(list=ls(all=TRUE))
 library('Rcpp')
-library('mvtnorm')
 set.seed(4)
 
 #get functions
@@ -9,34 +8,23 @@ source('gibbs functions.R')
 sourceCpp('aux1.cpp')
 
 #get data
-dat=read.csv('fake data4.csv',as.is=T)
+dat=read.csv('fake data5.csv',as.is=T)
 ind=which(colnames(dat)=='X')
 y=data.matrix(dat[,-ind]); dim(y)
 nspp=ncol(y)
 nloc=nrow(y)
 
-#get covariates
-xmat=data.matrix(read.csv('fake data cov4.csv',as.is=T))
-npar=ncol(xmat)
-xtx=t(xmat)%*%xmat
-tx=t(xmat)
-
 #priors
-mu=0#5
-sd1=0.1#3.286
+mu=5
+sd1=3.286
 sig2=sd1^2  
-prec=(1/sig2)*xtx+diag(1/10,npar)
-var.betas=solve(prec)
 
 #useful stuff
-ncomm=4
+ncomm=10
 hi=0.999999
 lo=0.000001
-delta.lo=-10
-delta.hi=10
 
 #initial values of parameters
-betas=matrix(0,npar,ncomm-1)
 theta=matrix(1/ncomm,nloc,ncomm)
 delta=matrix(0,nloc,ncomm-1)
 phi=matrix(1/nspp,ncomm,nspp)
@@ -51,7 +39,6 @@ accept.output=100
 ngibbs=1000
 theta.out=matrix(NA,ngibbs,ncomm*nloc)
 phi.out=matrix(NA,ngibbs,ncomm*nspp)
-betas.out=matrix(NA,ngibbs,npar*(ncomm-1))
 llk=rep(NA,ngibbs)
 options(warn=2)
 for (i in 1:ngibbs){
@@ -66,8 +53,7 @@ for (i in 1:ngibbs){
   
   #get parameters
   tmp=get.delta.theta(nlk=nlk,gamma=gamma,ncomm=ncomm,nloc=nloc,
-                      delta=delta,sig2=sig2,mu=mu,jump=jump1$delta,
-                      xmat=xmat,betas=betas,delta.lo=delta.lo,delta.hi=delta.hi)
+                      delta=delta,sig2=sig2,mu=mu,jump=jump1$delta)
   delta=tmp$delta
   theta=tmp$theta
   accept1$delta=accept1$delta+tmp$accept
@@ -77,9 +63,6 @@ for (i in 1:ngibbs){
   phi=rdirichlet1(alpha=nks+1,ncomm=ncomm,nspp=nspp) 
   # phi[phi>hi]=hi; phi[phi<lo]=lo
   # phi=phi.true
-  
-  betas=get.betas(var.betas=var.betas,sig2=sig2,tx=tx,
-                  delta=delta,mu=mu,npar=npar,ncomm=ncomm)
   
   #adapt MH
   if (i%%accept.output==0 & i<1000){
@@ -96,7 +79,6 @@ for (i in 1:ngibbs){
   llk[i]=sum(y*log(prob))
   theta.out[i,]=theta
   phi.out[i,]=phi
-  betas.out[i,]=betas
 }
 
 plot(llk,type='l',ylim=range(llk,na.rm=T))
