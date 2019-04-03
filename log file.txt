@@ -6,6 +6,19 @@ The problem of this is that, when I sample omega|delta, a generate random variab
 
 As a result, when I then do delta|omega, delta is likely to be relatively negative, which is definitively not what the data suggests it should be.
 #-----------------------------------------
-Nov 7th
+Nov 8th
 
-Can the bad results be due to a relatively strong prior on betas?
+Works well with known mu and sd1. Careful attention has to be given when generating fake data since these data need to have the following characteristics:
+
+a) delta: delta's can't range to very small or very big values (MH with random walk does not work for this)
+b) theta: each group should dominate at least some locations for this to be estimable.
+
+delta's are not estimated very well for last groups. This might be due to the fact that we are using a very small sig2. As a result, we might be running  into delta x betas identifiability problems for these last groups as there is not much information on the data.
+
+estimate sig2
+#---------------------------------------
+April 3rd
+
+1) code works well when phi[4,]=phi.true[4,] and ncomm=4
+2) when I eliminate "phi[4,]=phi.true[4,]" but keep ncomm=4, does it still work? yes, it works!
+3) when I eliminate "phi[4,]=phi.true[4,]" but use ncomm=20, does it still work? yes, it works!

@@ -7,6 +7,7 @@ set.seed(4)
 setwd('U:\\GIT_models\\git_LDA_MS')
 source('gibbs functions.R')
 sourceCpp('aux1.cpp')
+ncomm=10
 
 #get data
 dat=read.csv('fake data4.csv',as.is=T)
@@ -18,33 +19,19 @@ nloc=nrow(y)
 #get covariates
 xmat=data.matrix(read.csv('fake data cov4.csv',as.is=T))
 npar=ncol(xmat)
-xtx=t(xmat)%*%xmat
-tx=t(xmat)
-
-#priors
-mu=0#5
-sd1=0.1#3.286
-sig2=sd1^2  
-prec=(1/sig2)*xtx+diag(1/10,npar)
-var.betas=solve(prec)
 
 #useful stuff
-ncomm=4
 hi=0.999999
 lo=0.000001
-delta.lo=-10
-delta.hi=10
 
 #initial values of parameters
 betas=matrix(0,npar,ncomm-1)
 theta=matrix(1/ncomm,nloc,ncomm)
-delta=matrix(0,nloc,ncomm-1)
 phi=matrix(1/nspp,ncomm,nspp)
-gamma=0.1; 
 
 #MH stuff
-accept1=list(delta=matrix(0,nloc,ncomm-1))
-jump1=list(delta=matrix(0.3,nloc,ncomm-1))
+accept1=list(betas=matrix(0,npar,ncomm-1))
+jump1=list(betas=matrix(1,npar,ncomm-1))
 accept.output=100
 
 #gibbs details
@@ -52,10 +39,20 @@ ngibbs=1000
 theta.out=matrix(NA,ngibbs,ncomm*nloc)
 phi.out=matrix(NA,ngibbs,ncomm*nspp)
 betas.out=matrix(NA,ngibbs,npar*(ncomm-1))
+
 llk=rep(NA,ngibbs)
 options(warn=2)
 for (i in 1:ngibbs){
   print(i)   
+  
+  #sample betas
+  tmp=get.betas(xmat=xmat,y=y,
+                betas=betas,phi=phi,
+                npar=npar,ncomm=ncomm,
+                jump=jump1$betas,lo=lo)
+  betas=tmp$betas
+  theta=tmp$theta
+  accept1$betas=accept1$betas+tmp$accept
   
   #sample z
   tmp=samplez(theta=theta, phi=phi, y=y, ncommun=ncomm, nloc=nloc, nspp=nspp)
@@ -64,22 +61,10 @@ for (i in 1:ngibbs){
   nks=tmp$nks
   # nks=nks.true
   
-  #get parameters
-  tmp=get.delta.theta(nlk=nlk,gamma=gamma,ncomm=ncomm,nloc=nloc,
-                      delta=delta,sig2=sig2,mu=mu,jump=jump1$delta,
-                      xmat=xmat,betas=betas,delta.lo=delta.lo,delta.hi=delta.hi)
-  delta=tmp$delta
-  theta=tmp$theta
-  accept1$delta=accept1$delta+tmp$accept
-  # theta[theta>hi]=hi; theta[theta<lo]=lo
-  # theta=theta.true
-  
+  #sample phi
   phi=rdirichlet1(alpha=nks+1,ncomm=ncomm,nspp=nspp) 
   # phi[phi>hi]=hi; phi[phi<lo]=lo
-  # phi=phi.true
-  
-  betas=get.betas(var.betas=var.betas,sig2=sig2,tx=tx,
-                  delta=delta,mu=mu,npar=npar,ncomm=ncomm)
+  # phi[4,]=phi.true[4,]
   
   #adapt MH
   if (i%%accept.output==0 & i<1000){
@@ -89,8 +74,7 @@ for (i in 1:ngibbs){
   }
   
   #calculate loglikelihood
-  prob=theta%*%phi
-  prob[prob>hi]=hi; prob[prob<lo]=lo
+  prob=theta%*%phi; prob[prob<lo]=lo #to avoid numerical issues
 
   #store results  
   llk[i]=sum(y*log(prob))

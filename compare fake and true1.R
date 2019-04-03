@@ -1,16 +1,12 @@
-ind=1:3
-# ind=c(3,1,2)
-betas1=betas[,ind]
-
-par(mfrow=c(2,2))
-for (i in 1:3) plot(betas.true[,i],betas1[,i])
-
-table(jump1$delta)
-boxplot(jump1$delta)
+plot(NA,NA,ylim=c(0,1),xlim=c(0,nloc))
+for (i in 1:ncomm){
+  lines(theta[,i],col=i)
+}
 
 boxplot(theta)
 
-plot(delta.true,delta[,ind])
+ind=c(1,3:5)
+betas1=betas[,ind]
 
 #create true curves
 par(mfrow=c(2,2))
@@ -19,10 +15,10 @@ nsim=1000
 ncov.val=500
 seq1=seq(from=rango[1],to=rango[2],length.out=ncov.val)
 for (i in 1:(ncommun-1)){
-  x=matrix(0,ncov.val,ncommun-1)
-  x[,i]=seq1
-  media.estim=mu+x%*%betas1
-  media=mu+x%*%betas.true
+  x=cbind(1,matrix(0,ncov.val,ncommun-1))
+  x[,i+1]=seq1
+  media.estim=x%*%betas1
+  media=x%*%betas.true
   res.estim=res=matrix(NA,ncov.val,nsim)
   for (j in 1:nsim){
     #true
@@ -45,7 +41,7 @@ for (i in 1:(ncommun-1)){
   res1.estim=apply(res.estim,1,quantile,c(0.025,0.5,0.975))
   
   #true
-  plot(seq1,res1[2,],ylim=range(res1))
+  plot(seq1,res1[2,],ylim=c(0,1))
   lines(seq1,res1[1,],lty=3)
   lines(seq1,res1[3,],lty=3)
   

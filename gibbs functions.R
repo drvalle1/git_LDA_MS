@@ -20,14 +20,6 @@ print.adapt = function(accept1z,jump1z,accept.output){
   return(list(jump1=jump1,accept1=accept1))
 }
 #----------------------------
-#this function calculates a correction in the MH acceptance probability
-#associated with using a truncated normal as a proposal distribution
-fix.MH=function(lo,hi,old1,new1,jump){
-  jold=pnorm(hi,mean=old1,sd=jump)-pnorm(lo,mean=old1,sd=jump)
-  jnew=pnorm(hi,mean=new1,sd=jump)-pnorm(lo,mean=new1,sd=jump)
-  log(jold)-log(jnew) #add this to pnew
-}
-#----------------------------------------------------------------------------------------------
 #accepts or rejects based on MH algorithm
 acceptMH <- function(p0,p1,x0,x1){   #accept for M, M-H
 
@@ -41,62 +33,6 @@ acceptMH <- function(p0,p1,x0,x1){   #accept for M, M-H
   x0
 }
 #-------------------------------
-#this function generates truncated normal random variables
-tnorm <- function(n,lo,hi,mu,sig){   
-  #normal truncated lo and hi
-  q1 <- pnorm(lo,mu,sig) #cumulative distribution
-  q2 <- pnorm(hi,mu,sig) #cumulative distribution
-  
-  z <- runif(n,q1,q2)
-  z <- qnorm(z,mu,sig)
-  z[z == -Inf]  <- lo
-  z[z == Inf]   <- hi
-  z
-}
-#-----------------------------------------
-#this function samples delta
-#which then generates vmat, 
-#which is then used to generate the theta matrix
-get.delta.theta=function(nlk,gamma,ncomm,nloc,delta,sig2,mu,jump,xmat,betas,
-                         delta.lo,delta.hi){
-  #calculate the number of individuals in groups greater than k
-  ngreater1=ngreater(nlk,nloc,ncomm) 
-
-  #propose new deltas  
-  delta.new=delta.old=delta
-  tmp=tnorm(nloc*(ncomm-1),lo=delta.lo,hi=delta.hi,mu=delta.old,sig=jump) 
-  proposed=matrix(tmp,nloc,ncomm-1)
-  #calculate correction factor to MH acceptance probability because we used 
-  #a truncated normal distribution as a proposal distribution
-  fix.TN=fix.MH(lo=delta.lo,hi=delta.hi,old1=delta.old,new1=proposed,jump=jump)
-  
-  #pre-calculate stuff
-  calc.old=log(1+exp(-delta.old))
-  calc.new=log(1+exp(-proposed))
-  media=mu+xmat%*%betas
-  calc.old1=(1/(2*sig2))*((delta.old-media)^2)
-  calc.new1=(1/(2*sig2))*((proposed-media)^2)
-
-  for (i in 1:(ncomm-1)){
-    delta.new=delta.old
-    delta.new[,i]=proposed[,i]
-  
-    #calculate probabilities
-    pold=-nlk[,i]*calc.old[,i]-ngreater1[,i+1]*(delta.old[,i]+calc.old[,i])-calc.old1[,i]
-    pnew=-nlk[,i]*calc.new[,i]-ngreater1[,i+1]*(delta.new[,i]+calc.new[,i])-calc.new1[,i]
-    
-    #accept MH piece
-    delta.old[,i]=acceptMH(p0=pold,p1=pnew+fix.TN[,i],x0=delta.old[,i],x1=delta.new[,i])
-  }
-  
-  #get corresponding vmat matrix
-  prob=1/(1+exp(-delta.old))
-  vmat=cbind(prob,1)
-  #convert vmat matrix to theta matrix
-  theta=convertVtoTheta(vmat,rep(1,nloc))
-  list(theta=theta,delta=delta.old,accept=delta!=delta.old)  
-}
-#-----------------------------------------
 #this function generates dirichlet random variables (1 one for each row of alpha)
 rdirichlet1=function(alpha,ncomm,nspp){
   tmp=matrix(rgamma(n=ncomm*nspp,alpha,1),ncomm,nspp)
@@ -104,11 +40,40 @@ rdirichlet1=function(alpha,ncomm,nspp){
   tmp/soma
 }
 #-----------------------------------------
-#this function samples the regression slope parameters
-get.betas=function(var.betas,sig2,tx,delta,mu,npar,ncomm){
-  err=delta-mu
-  pmedia=(1/sig2)*tx%*%err
-  media=var.betas%*%pmedia
-  tmp=rmvnorm(ncomm-1,mean=rep(0,npar),sig=var.betas)
-  t(tmp)+media
+get.theta=function(xmat,betas,nloc){
+  tmp=xmat%*%betas
+  probs=1/(1+exp(tmp))
+  vmat=cbind(probs,1)
+  convertVtoTheta(vmat,rep(1,nloc))
 }
+#-----------------------------------------
+#this function samples the regression slope parameters
+get.betas=function(xmat,y,betas,phi,npar,ncomm,jump,lo){
+  betas.old=betas.new=betas.orig=betas
+  for (i in 1:npar){
+    for (j in 1:(ncomm-1)){
+      betas.new=betas.old
+      betas.new[i,j]=rnorm(1,mean=betas.old[i,j],sd=jump[i,j])
+      theta.old=get.theta(xmat,betas.old,nloc)
+      theta.new=get.theta(xmat,betas.new,nloc)
+      prob.old=theta.old%*%phi; prob.old[prob.old<lo]=lo #to avoid numerical issues
+      prob.new=theta.new%*%phi; prob.new[prob.new<lo]=lo #to avoid numerical issues
+      lprob.old=log(prob.old)
+      lprob.new=log(prob.new)
+      pold=sum(y*lprob.old)
+      pnew=sum(y*lprob.new)
+      prior.old=(-1/2)*(betas.old[i,j]^2)
+      prior.new=(-1/2)*(betas.new[i,j]^2)
+      k=acceptMH(p0=pold+prior.old,
+                 p1=pnew+prior.new,
+                 x0=betas.old[i,j],
+                 x1=betas.new[i,j])
+      betas.old[i,j]=k
+    }
+  }
+  theta=get.theta(xmat,betas.old,nloc)
+  list(betas=betas.old,
+       accept=betas.old!=betas.orig,
+       theta=theta)
+}
+
