@@ -48,14 +48,14 @@ get.theta=function(xmat,betas,nloc){
 }
 #-----------------------------------------
 #this function samples the regression slope parameters
-get.betas=function(xmat,y,betas,phi,npar,ncomm,jump,lo){
+get.betas=function(xmat,y,betas,phi,npar,ncomm,jump,lo,nloc){
   betas.old=betas.new=betas.orig=betas
   for (i in 1:npar){
     for (j in 1:(ncomm-1)){
       betas.new=betas.old
       betas.new[i,j]=rnorm(1,mean=betas.old[i,j],sd=jump[i,j])
-      theta.old=get.theta(xmat,betas.old,nloc)
-      theta.new=get.theta(xmat,betas.new,nloc)
+      theta.old=get.theta(xmat=xmat,betas=betas.old,nloc=nloc)
+      theta.new=get.theta(xmat=xmat,betas=betas.new,nloc=nloc)
       prob.old=theta.old%*%phi; prob.old[prob.old<lo]=lo #to avoid numerical issues
       prob.new=theta.new%*%phi; prob.new[prob.new<lo]=lo #to avoid numerical issues
       lprob.old=log(prob.old)
