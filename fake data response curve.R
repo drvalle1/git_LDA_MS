@@ -2,9 +2,6 @@ rm(list=ls(all=TRUE))
 library('Rcpp')
 set.seed(4)
 
-setwd('U:\\GIT_models\\git_LDA_MS')
-sourceCpp('aux1.cpp')
-
 nloc=1000
 nspp=100
 ncommun=4
@@ -46,7 +43,7 @@ for (i in 1:ncommun){
   tmp=exp(xmat1%*%betas)
   soma=matrix(apply(tmp,1,sum),nloc,ncommun)
   theta.hyp=tmp/soma
-  plot(xmat1[,i+1],theta.hyp[,i],type='l')
+  for (j in 1:4) plot(xmat1[,i+1],theta.hyp[,j],type='l',main=i)
 }
 
 #generate phi  

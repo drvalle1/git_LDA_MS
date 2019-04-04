@@ -5,56 +5,56 @@ plot(res$llk,type='l',ylim=range(res$llk,na.rm=T))
 nloc=nrow(y)
 theta=matrix(res$theta[nrow(res$theta),],nloc,ncomm)
 
-plot(NA,NA,ylim=c(0,1),xlim=c(0,nloc))
-for (i in 1:ncomm){
-  lines(theta[,i],col=i)
-}
-
+par(mfrow=c(1,1))
 boxplot(theta)
 
+ind=c(1,2,6,9)
+theta1=theta[,ind]
+plot(NA,NA,ylim=c(0,1),xlim=c(0,nloc))
+for (i in 1:ncol(theta1)){
+  lines(theta1[,i],col=i)
+}
+
+#get parameters
+npar=ncol(xmat1)
+betas=matrix(res$betas[nrow(res$betas),],npar,ncomm-1)
+
+#create design matrix of interest
+seq1=seq(from=-1,to=1,length.out=nloc)
+knots=seq(from=-0.5,to=0.5,by=0.5)
+mat=seq1
+for (i in 1:length(knots)){
+  tmp=ifelse(seq1-knots[i]<0,0,seq1-knots[i])
+  mat=cbind(mat,tmp)
+}
+mat.focus=mat
+
+#create design matrix to fill in
+seq1=rep(0,nloc)
+mat=seq1
+for (i in 1:length(knots)){
+  tmp=ifelse(seq1-knots[i]<0,0,seq1-knots[i])
+  mat=cbind(mat,tmp)
+}
+mat.fill=mat
+
 #create true curves
-# ind=c(1,3:5)
-# betas1=betas[,ind]
-# 
-# #create true curves
-# par(mfrow=c(2,2))
-# rango=range(xmat)
-# nsim=1000
-# ncov.val=500
-# seq1=seq(from=rango[1],to=rango[2],length.out=ncov.val)
-# for (i in 1:(ncommun-1)){
-#   x=cbind(1,matrix(0,ncov.val,ncommun-1))
-#   x[,i+1]=seq1
-#   media.estim=x%*%betas1
-#   media=x%*%betas.true
-#   res.estim=res=matrix(NA,ncov.val,nsim)
-#   for (j in 1:nsim){
-#     #true
-#     tmp=rnorm(ncov.val*(ncommun-1),mean=media,sd=sd1)
-#     delta=matrix(tmp,ncov.val,ncommun-1)
-#     prob=1/(1+exp(-delta))
-#     vmat=cbind(prob,1)
-#     tmp=convertVtoTheta(vmat,rep(1,nloc))
-#     res[,j]=tmp[,i]
-#     
-#     #estim
-#     tmp=rnorm(ncov.val*(ncommun-1),mean=media.estim,sd=sd1)
-#     delta=matrix(tmp,ncov.val,ncommun-1)
-#     prob=1/(1+exp(-delta))
-#     vmat=cbind(prob,1)
-#     tmp=convertVtoTheta(vmat,rep(1,nloc))
-#     res.estim[,j]=tmp[,i]
-#   }
-#   res1=apply(res,1,quantile,c(0.025,0.5,0.975))
-#   res1.estim=apply(res.estim,1,quantile,c(0.025,0.5,0.975))
-#   
-#   #true
-#   plot(seq1,res1[2,],ylim=c(0,1))
-#   lines(seq1,res1[1,],lty=3)
-#   lines(seq1,res1[3,],lty=3)
-#   
-#   #estim
-#   lines(seq1,res1.estim[2,],col='red')
-#   lines(seq1,res1.estim[3,],lty=3,col='red')
-#   lines(seq1,res1.estim[1,],lty=3,col='red')
-# }
+par(mfrow=c(2,2))
+cov=4
+
+#get design matrix
+xmat2=xmat1
+xmat2[,-1]=cbind(mat.fill,mat.fill,mat.fill,mat.fill)
+nome=paste0('cov',cov)
+ind=grep(nome,colnames(xmat2))
+xmat2[,ind]=mat.focus
+  
+#calculate theta
+media=xmat2%*%betas
+prob=1/(1+exp(-media))
+vmat=cbind(prob,1)
+theta=convertVtoTheta(vmat,rep(1,nloc))
+
+ind=c(1,2,3,6)  
+#plot results
+for (i in 1:length(ind)) plot(seq(from=-1,to=1,length.out=nloc),theta[,ind[i]],type='l',main=cov)

@@ -40,9 +40,8 @@ rdirichlet1=function(alpha,ncomm,nspp){
   tmp/soma
 }
 #-----------------------------------------
-get.theta=function(xmat,betas,nloc){
-  tmp=xmat%*%betas
-  probs=1/(1+exp(tmp))
+get.theta=function(media,nloc){
+  probs=1/(1+exp(-media))
   vmat=cbind(probs,1)
   convertVtoTheta(vmat,rep(1,nloc))
 }
@@ -50,28 +49,42 @@ get.theta=function(xmat,betas,nloc){
 #this function samples the regression slope parameters
 get.betas=function(xmat,y,betas,phi,npar,ncomm,jump,lo,nloc){
   betas.old=betas.new=betas.orig=betas
+  media.old=xmat%*%betas.old
+  
+  #propose new beta values
+  tmp=rnorm(npar*(ncomm-1),mean=betas.old,sd=jump)
+  proposed=matrix(tmp,npar,ncomm-1)
+  
+  #calculate prior probabilities
+  prior.old=(-1/2)*(betas.old^2)
+  prior.new=(-1/2)*(proposed^2)
+  
   for (i in 1:npar){
     for (j in 1:(ncomm-1)){
       betas.new=betas.old
-      betas.new[i,j]=rnorm(1,mean=betas.old[i,j],sd=jump[i,j])
-      theta.old=get.theta(xmat=xmat,betas=betas.old,nloc=nloc)
-      theta.new=get.theta(xmat=xmat,betas=betas.new,nloc=nloc)
+      media.new=media.old
+      
+      betas.new[i,j]=proposed[i,j]
+      media.new[,j]=xmat%*%betas.new[,j]
+      
+      theta.old=get.theta(media=media.old,nloc=nloc)
+      theta.new=get.theta(media=media.new,nloc=nloc)
       prob.old=theta.old%*%phi; prob.old[prob.old<lo]=lo #to avoid numerical issues
       prob.new=theta.new%*%phi; prob.new[prob.new<lo]=lo #to avoid numerical issues
       lprob.old=log(prob.old)
       lprob.new=log(prob.new)
       pold=sum(y*lprob.old)
       pnew=sum(y*lprob.new)
-      prior.old=(-1/2)*(betas.old[i,j]^2)
-      prior.new=(-1/2)*(betas.new[i,j]^2)
-      k=acceptMH(p0=pold+prior.old,
-                 p1=pnew+prior.new,
+      k=acceptMH(p0=pold+prior.old[i,j],
+                 p1=pnew+prior.new[i,j],
                  x0=betas.old[i,j],
                  x1=betas.new[i,j])
       betas.old[i,j]=k
+      media.old[,j]=xmat%*%betas.old[,j]
     }
   }
-  theta=get.theta(xmat,betas.old,nloc)
+  media=xmat%*%betas.old
+  theta=get.theta(media=media,nloc=nloc)
   list(betas=betas.old,
        accept=betas.old!=betas.orig,
        theta=theta)
