@@ -24,7 +24,7 @@ betas.true=betas
 #generate thetas
 tmp=exp(xmat%*%betas)
 soma=matrix(apply(tmp,1,sum),nloc,ncommun)
-theta=tmp/soma
+theta.true=theta=tmp/soma
 par(mfrow=c(1,1))
 boxplot(theta)
 

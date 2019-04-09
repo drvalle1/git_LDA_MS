@@ -3,17 +3,18 @@ library('Rcpp')
 set.seed(4)
 
 setwd('U:\\GIT_models\\git_LDA_MS')
-sourceCpp('aux1.cpp')
-
+sourceCpp('LDA_MS_c.cpp')
 nloc=1000
 nspp=100
-ncommun=4
+ncommun=6
 
 #generate covariates
-tmp1=c(seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5),rep(0,3*nloc/5))
-tmp2=c(rep(0,nloc/5),seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5),rep(0,2*nloc/5))
-tmp3=c(rep(0,2*nloc/5),seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5),rep(0,nloc/5))
-xmat=cbind(1,tmp1,tmp2,tmp3)*2
+tmp1=c(seq(from=2,to=0,length.out=nloc/5),rep(0,4*nloc/5))
+tmp2=c(seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5),rep(0,3*nloc/5))
+tmp3=c(rep(0,nloc/5),seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5),rep(0,2*nloc/5))
+tmp4=c(rep(0,2*nloc/5),seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5),rep(0,nloc/5))
+tmp5=c(rep(0,3*nloc/5),seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5))
+xmat=cbind(1,tmp1,tmp2,tmp3,tmp4,tmp5)*2
 colnames(xmat)=paste('cov',0:(ncommun-1),sep='')
 
 #look at xmat
@@ -22,9 +23,11 @@ for (i in 2:ncol(xmat)) lines(1:nloc,xmat[,i],col=i)
 
 #generate betas
 betas=matrix(NA,ncol(xmat),ncommun-1)
-betas[,1]=c(-1,1,0,0)*3
-betas[,2]=c(-1,0,1,0)*3
-betas[,3]=c(-1,0,0,1)*3
+betas[,1]=c(-1,1,0,0,0,0)*3
+betas[,2]=c(-1,0,1,0,0,0)*3
+betas[,3]=c(-1,0,0,1,0,0)*3
+betas[,4]=c(-1,0,0,0,1,0)*3
+betas[,5]=c(-1,0,0,0,0,1)*3
 betas.true=betas
 
 #generate probs
@@ -67,7 +70,7 @@ nks=matrix(0,ncommun,nspp)
 y=matrix(NA,nloc,nspp)
 for (i in 1:nloc){
   nlk[i,]=rmultinom(1,size=nl[i],prob=theta[i,])
-  tmp1=rep(0,ncommun)
+  tmp1=rep(0,nspp)
   for (k in 1:ncommun){
     tmp=rmultinom(1,size=nlk[i,k],prob=phi[k,])
     nks[k,]=nks[k,]+tmp

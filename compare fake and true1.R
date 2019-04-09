@@ -5,14 +5,31 @@ plot(res$llk,type='l',ylim=range(res$llk,na.rm=T))
 nloc=nrow(y)
 theta=matrix(res$theta[nrow(res$theta),],nloc,ncomm)
 
-par(mfrow=c(1,1))
-boxplot(theta)
-
-ind=c(1,2,6,9)
+#re-order theta
+res=matrix(NA,6,ncomm)
+for (i in 1:6){
+  for (j in 1:ncomm){
+    res[i,j]=cor(cbind(theta.true[,i],theta[,j]))[2,1]
+  }
+}
+ind=numeric()
+for (i in 1:6) ind=c(ind,which(res[i,]==max(res[i,])))
 theta1=theta[,ind]
-plot(NA,NA,ylim=c(0,1),xlim=c(0,nloc))
-for (i in 1:ncol(theta1)){
-  lines(theta1[,i],col=i)
+
+plot(theta.true,theta1)
+
+rango=c(0,1)
+plot(NA,NA,xlim=c(0,nrow(theta.true)),ylim=rango)
+seq1=1:nrow(theta.true)
+for (i in 1:6) {
+  lines(seq1,theta.true[,i],col=i)
+  lines(seq1,theta1[,i],col=i,lty=2,lwd=2) 
+}
+
+rango=c(0,1)
+for (i in 1:4){
+  plot(theta.true[,i],theta1[,i],xlim=rango,ylim=rango,main=i)
+  lines(rango,rango,col='red',lwd=2)
 }
 
 #get parameters
@@ -39,7 +56,7 @@ for (i in 1:length(knots)){
 mat.fill=mat
 
 #create true curves
-par(mfrow=c(2,2))
+par(mfrow=c(2,2),mar=c(3,3,1,1))
 cov=4
 
 #get design matrix

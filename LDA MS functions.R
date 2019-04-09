@@ -59,6 +59,13 @@ get.betas=function(xmat,y,betas,phi,npar,ncomm,jump,lo,nloc){
   prior.old=(-1/2)*(betas.old^2)
   prior.new=(-1/2)*(proposed^2)
   
+  #pre-calculate pold
+  media.old=xmat%*%betas.old
+  theta.old=get.theta(media=media.old,nloc=nloc)
+  prob.old=theta.old%*%phi; prob.old[prob.old<lo]=lo #to avoid numerical issues
+  lprob.old=log(prob.old)
+  pold=sum(y*lprob.old)
+  
   for (i in 1:npar){
     for (j in 1:(ncomm-1)){
       betas.new=betas.old
@@ -66,21 +73,19 @@ get.betas=function(xmat,y,betas,phi,npar,ncomm,jump,lo,nloc){
       
       betas.new[i,j]=proposed[i,j]
       media.new[,j]=xmat%*%betas.new[,j]
-      
-      theta.old=get.theta(media=media.old,nloc=nloc)
       theta.new=get.theta(media=media.new,nloc=nloc)
-      prob.old=theta.old%*%phi; prob.old[prob.old<lo]=lo #to avoid numerical issues
       prob.new=theta.new%*%phi; prob.new[prob.new<lo]=lo #to avoid numerical issues
-      lprob.old=log(prob.old)
       lprob.new=log(prob.new)
-      pold=sum(y*lprob.old)
       pnew=sum(y*lprob.new)
       k=acceptMH(p0=pold+prior.old[i,j],
                  p1=pnew+prior.new[i,j],
                  x0=betas.old[i,j],
                  x1=betas.new[i,j])
-      betas.old[i,j]=k
-      media.old[,j]=xmat%*%betas.old[,j]
+      if (k==betas.new[i,j]){ #if new value
+        betas.old[i,j]=k
+        media.old[,j]=xmat%*%betas.old[,j]
+        pold=pnew
+      }
     }
   }
   media=xmat%*%betas.old

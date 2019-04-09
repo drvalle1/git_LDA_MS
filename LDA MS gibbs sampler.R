@@ -1,4 +1,4 @@
-LDA.MS.gibbs=function(y,xmat,ncomm,ngibbs,nburnin){
+LDA.MS.gibbs=function(y,xmat,ncomm,ngibbs,nburnin,vmat.init=NULL,phi.init=NULL){
   #basic settings
   nspp=ncol(y)
   nloc=nrow(y)
@@ -9,10 +9,18 @@ LDA.MS.gibbs=function(y,xmat,ncomm,ngibbs,nburnin){
   lo=0.000001
   
   #initial values of parameters
-  betas=matrix(0,npar,ncomm-1)
+  if ( is.null(vmat.init)) betas=matrix(0,npar,ncomm-1)
+  if (!is.null(vmat.init)) {
+    vmat.init[vmat.init<0.01]=0.01
+    vmat.init[vmat.init>0.99]=0.99
+    #calculate implied betas
+    tmp=log(vmat.init/(1-vmat.init))
+    betas=solve(t(xmat)%*%xmat)%*%t(xmat)%*%tmp #these should be good starting values
+  }
+  if ( is.null(phi.init))   phi=matrix(1/nspp,ncomm,nspp)
+  if (!is.null(phi.init))   phi=phi.init
   theta=matrix(1/ncomm,nloc,ncomm)
-  phi=matrix(1/nspp,ncomm,nspp)
-  
+
   #MH stuff
   accept1=list(betas=matrix(0,npar,ncomm-1))
   jump1=list(betas=matrix(1,npar,ncomm-1))
