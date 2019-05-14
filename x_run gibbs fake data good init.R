@@ -34,18 +34,6 @@ vmat1=vmat[,-ncomm]
 theta=matrix(res$theta[ind,],nrow(y),ncomm) 
 phi=matrix(res$phi[ind,],ncomm,ncol(y))
 
-#are the thetas similar to what they should be?
-# boxplot(theta)
-# theta1=theta[,1:6]
-# res=matrix(NA,6,6)
-# for (i in 1:6){
-#   for (j in 1:6){
-#     res[i,j]=cor(cbind(theta.true[,i],theta1[,j]))[1,2]
-#   }
-# }
-# ind=numeric()
-# for (i in 1:6) ind=c(ind,which(res[i,]==max(res[i,])))
-# plot(theta1[,ind],theta.true)
 #-----------------------------------------------------------
 #*****LDA covariates*****
 

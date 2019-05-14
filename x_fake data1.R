@@ -4,43 +4,53 @@ set.seed(4)
 
 setwd('U:\\GIT_models\\git_LDA_MS')
 sourceCpp('LDA_MS_c.cpp')
+
 nloc=1000
-nspp=100
-ncommun=6
+nspp=200
+ncommun=7
 
 #generate covariates
-tmp1=c(seq(from=2,to=0,length.out=nloc/5),rep(0,4*nloc/5))
-tmp2=c(seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5),rep(0,3*nloc/5))
-tmp3=c(rep(0,nloc/5),seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5),rep(0,2*nloc/5))
-tmp4=c(rep(0,2*nloc/5),seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5),rep(0,nloc/5))
-tmp5=c(rep(0,3*nloc/5),seq(from=0,to=2,length.out=nloc/5),seq(from=2,to=0,length.out=nloc/5))
-xmat=cbind(1,tmp1,tmp2,tmp3,tmp4,tmp5)*2
+dist=nloc/(ncommun+1)
+init=1
+
+xmat=numeric()
+for (i in 1:(ncommun-1)){
+  if (i!=1) init=init+dist
+  fim=init+2*dist
+  med=init+dist
+  
+  tmp=rep(0,nloc)
+  tmp[init:(fim-1)]=c(seq(from=0,to=2,length.out=dist),seq(from=2,to=0,length.out=dist))
+  xmat=cbind(xmat,tmp)
+}
+
+xmat=cbind(1,xmat)*2
 colnames(xmat)=paste('cov',0:(ncommun-1),sep='')
 
 #look at xmat
 plot(NA,NA,ylim=range(xmat),xlim=c(1,nloc),main='covariates')
 for (i in 2:ncol(xmat)) lines(1:nloc,xmat[,i],col=i)
 
+#standardize xmat
+media1=apply(xmat,2,mean)
+sd1=apply(xmat,2,sd)
+xmat[,1]=1
+for (i in 2:ncol(xmat)){
+  xmat[,i]=(xmat[,i]-media1[i])/sd1[i]
+}
+apply(xmat,2,mean)
+apply(xmat,2,sd)
+xmat.centered=xmat
+
 #generate betas
 betas=matrix(NA,ncol(xmat),ncommun-1)
-betas[,1]=c(-1,1,0,0,0,0)*3
-betas[,2]=c(-1,0,1,0,0,0)*3
-betas[,3]=c(-1,0,0,1,0,0)*3
-betas[,4]=c(-1,0,0,0,1,0)*3
-betas[,5]=c(-1,0,0,0,0,1)*3
+betas[1,]=-1
+betas[-1,]=diag(1,ncol(xmat)-1)
+betas=betas*3
 betas.true=betas
 
-#generate probs
-probs=matrix(NA,nloc,ncommun-1)
-for (i in 1:(ncommun-1)){
-  media=xmat%*%betas[,i]
-  probs[,i]=1/(1+exp(-media))
-}
-probs.true=probs
-range(probs)
-
 #generate thetas
-vmat=cbind(probs,1)
+vmat.true=vmat=cbind(pnorm(xmat.centered%*%betas.true),1)
 theta.true=theta=convertVtoTheta(vmat,rep(1,nloc))
 #this is important: it determines if the model will be able to disentagle these groups
 boxplot(theta,ylim=c(0,1)) 
@@ -64,7 +74,7 @@ unique(rowSums(phi))
 phi.true=phi
 
 #generate actual observations y
-nl=floor(runif(nloc,min=100,max=200))
+nl=floor(runif(nloc,min=100,max=400))
 nlk=matrix(NA,nloc,ncommun)
 nks=matrix(0,ncommun,nspp)
 y=matrix(NA,nloc,nspp)
@@ -92,7 +102,7 @@ nks.true=nks
 
 #export results
 setwd('U:\\GIT_models\\git_LDA_MS')
-nome=paste(c('fake data','fake data cov'),ncommun,'.csv',sep='')    
+nome=paste(c('fake data','fake data cov'),'.csv',sep='')    
 colnames(y)=paste('spp',1:nspp,sep='')
 rownames(y)=paste('loc',1:nloc,sep='')
 write.csv(y,nome[1])

@@ -22,3 +22,28 @@ April 3rd
 1) code works well when phi[4,]=phi.true[4,] and ncomm=4
 2) when I eliminate "phi[4,]=phi.true[4,]" but keep ncomm=4, does it still work? yes, it works!
 3) when I eliminate "phi[4,]=phi.true[4,]" but use ncomm=20, does it still work? yes, it works!
+#---------------------------------------
+April 9th
+
+1) code seems to work well with simple logistic regression but no gaussian second stage regression
+#---------------------------------------
+April 10
+
+Underlying Gaussian regression
+1) code works with ncomm.true=4
+2) code does not work with ncomm.true=9 regardless if I initialize the algorithm with the results from the unstructured LDA. 
+The problem is that the algorithm is lumping groups together. It seems that even the unstructure LDA lumps groups together.
+3) If I increase the number of species from 100 to 300, does this problem go away? No, we also need to:
+a - increase the number of trees in each location from 100-200 to 100-400
+b - change the prior for phi from Dirichet(1) to Dirichlet(0.1)
+
+It works for estimating theta!!! But what about betas and sig2?
+#------------------------------------------
+April 11
+
+1) Extreme values of delta might lead to very small changes in loglik. 
+Nevertheless, this would dramatically change the betas
+
+2) We can get the same theta values with 
+a) large sig2 and bad betas
+b) small sig2 and good betas
