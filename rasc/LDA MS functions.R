@@ -7,13 +7,14 @@ rdirichlet1=function(alpha,ncomm,nspp){
 }
 #-----------------------------------------
 #this function samples the regression slope parameters
-get.betas=function(tx,xmat,ncomm,npar,soma,n,nloc){
+get.betas=function(tx,xmat,ncomm,npar,soma,n,nloc,mu.betas,var.betas){
+  inv.Tau=diag(1/var.betas)
   betas=matrix(NA,npar,ncomm-1)
   for (i in 1:(ncomm-1)){
     qtq=diag(n[,i])
-    prec=tx%*%qtq%*%xmat+diag(1,npar)
+    prec=tx%*%qtq%*%xmat+inv.Tau
     var1=solve(prec)
-    pmedia=tx%*%soma[,i]
+    pmedia=(tx%*%soma[,i])+inv.Tau%*%mu.betas
     betas[,i]=rmvnorm(1,var1%*%pmedia,var1)
   }
   

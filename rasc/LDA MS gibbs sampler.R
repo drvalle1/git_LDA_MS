@@ -1,4 +1,4 @@
-LDA.MS.gibbs=function(y,xmat,ncomm,ngibbs,nburnin,vmat.init=NULL,phi.init=NULL,phi.prior){
+LDA.MS.gibbs=function(y,xmat,ncomm,ngibbs,nburnin,vmat.init1=NULL,phi.init=NULL,phi.prior,mu.betas,var.betas){
   #basic settings
   nspp=ncol(y)
   nloc=nrow(y)
@@ -16,13 +16,14 @@ LDA.MS.gibbs=function(y,xmat,ncomm,ngibbs,nburnin,vmat.init=NULL,phi.init=NULL,p
   theta=matrix(1/ncomm,nloc,ncomm)
   betas=matrix(0,npar,ncomm-1)
   #initial values of parameters
-  if (!is.null(vmat.init)) {
-    vmat.init[vmat.init<lo]=lo
-    vmat.init[vmat.init>hi]=hi
-    theta=convertVtoTheta(vmat.init,rep(1,nloc))
+  if (!is.null(vmat.init1)) {
+    theta=convertVtoTheta(vmat.init1,rep(1,nloc))
 
     #calculate implied betas
-    tmp=qnorm(vmat.init[,-ncomm])
+    vmat.init2=vmat.init1[,-ncomm]
+    vmat.init2[vmat.init2>hi]=hi
+    vmat.init2[vmat.init2<lo]=lo
+    tmp=qnorm(vmat.init2)
     betas=solve(t(xmat)%*%xmat)%*%t(xmat)%*%tmp #these should be good starting values
   }
   if (!is.null(phi.init))   phi=phi.init
@@ -46,7 +47,8 @@ LDA.MS.gibbs=function(y,xmat,ncomm,ngibbs,nburnin,vmat.init=NULL,phi.init=NULL,p
     
     #sample phi
     # phi=rbind(phi.true,matrix(1/nspp,11,nspp))
-    phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
+    phi=phi.true
+    # phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
     # # phi[phi>hi]=hi; phi[phi<lo]=lo
     # # phi[4,]=phi.true[4,]
 
@@ -56,7 +58,7 @@ LDA.MS.gibbs=function(y,xmat,ncomm,ngibbs,nburnin,vmat.init=NULL,phi.init=NULL,p
     n=tmp$n
 
     #sample betas
-    tmp=get.betas(tx=tx,xmat=xmat,ncomm=ncomm,npar=npar,n=n,soma=soma,nloc=nloc)
+    tmp=get.betas(tx=tx,xmat=xmat,ncomm=ncomm,npar=npar,n=n,soma=soma,nloc=nloc,mu.betas=mu.betas,var.betas=var.betas)
     betas=tmp$betas
     theta=tmp$theta
 

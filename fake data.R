@@ -1,70 +1,50 @@
 rm(list=ls(all=TRUE))
-library('Rcpp')
-set.seed(4)
+library(MCMCpack)
+set.seed(5)
 
-setwd('U:\\GIT_models\\git_LDA_MS')
-sourceCpp('LDA_MS_c.cpp')
-
-nloc=1000
-nspp=200
-ncommun=9
-
-#generate covariates
-dist=nloc/(ncommun+1)
-init=1
-
-xmat=matrix(rnorm(nloc*(ncommun-1)),nloc,ncommun-1)
-xmat=cbind(2,xmat)
-colnames(xmat)=paste('cov',0:(ncommun-1),sep='')
-
-#look at xmat
-plot(NA,NA,ylim=range(xmat),xlim=c(1,nloc),main='covariates')
-for (i in 2:ncol(xmat)) lines(1:nloc,xmat[,i],col=i)
-
-#standardize xmat
-media1=apply(xmat,2,mean)
-sd1=apply(xmat,2,sd)
-xmat[,1]=1
-for (i in 2:ncol(xmat)){
-  xmat[,i]=(xmat[,i]-media1[i])/sd1[i]
-}
-apply(xmat,2,mean)
-apply(xmat,2,sd)
-xmat.centered=xmat
-
-#generate betas
-betas=matrix(NA,ncol(xmat),ncommun-1)
-betas[1,]=-1
-betas[-1,]=diag(1,ncol(xmat)-1)
-betas=betas*3
-betas.true=betas
+nloc=5000
+nspp=100
+ncommun=8
+base=floor(nloc/(ncommun-2))
 
 #generate thetas
-vmat.true=vmat=cbind(pnorm(xmat.centered%*%betas.true),1)
-theta.true=theta=convertVtoTheta(vmat,rep(1,nloc))
-#this is important: it determines if the model will be able to disentagle these groups
-boxplot(theta,ylim=c(0,1)) 
-
-#create true curves
-plot(NA,NA,ylim=c(0,1),xlim=c(0,nloc))
+x=seq(from=-1,to=1,length.out=base)
+y=sqrt(1-(x^2))*0.1
+min1=0.0001
+y[y<min1]=min1
+# plot(x,y)
+  
+init=floor(nloc/ncommun)
+seq1=c(seq(from=1,to=nloc,by=init),nloc)
+  
+theta=matrix(min1,nloc,ncommun)
 for (i in 1:ncommun){
-  lines(theta[,i],col=i)
+  seq2=seq1[i]:(seq1[i]+base-1)
+  seq3=seq2[seq2<=nloc]
+  theta[seq3,i]=y[1:length(seq3)]
 }
-apply(theta,2,max)
-
+theta=theta/matrix(apply(theta,1,sum),nloc,ncommun)
+theta.true=theta
+  
+plot(NA,NA,xlim=c(0,nloc),ylim=c(0,1))
+for (i in 1:ncommun) lines(1:nloc,theta[,i],col=i)
+  
 #generate phi  
-tmp=matrix(rnorm(ncommun*nspp,mean=0,sd=2),ncommun,nspp)
-tmp[tmp<0.1]=0.1
-tmp[,1:(2*ncommun)]=cbind(diag(8,ncommun),diag(8,ncommun))
+tmp=rdirichlet(ncommun,alpha=rep(1,nspp))
+for (i in 1:nspp){
+  ind=sample(1:ncommun,size=ncommun/2)
+  tmp[ind,i]=0
+}
 phi=tmp/matrix(rowSums(tmp),ncommun,nspp)
 round(phi[,1:20],2)
 table(round(phi,2))
 
 unique(rowSums(phi))
 phi.true=phi
+image(phi)
 
 #generate actual observations y
-nl=floor(runif(nloc,min=100,max=400))
+nl=floor(runif(nloc,min=200,max=400))
 nlk=matrix(NA,nloc,ncommun)
 nks=matrix(0,ncommun,nspp)
 y=matrix(NA,nloc,nspp)
@@ -92,9 +72,7 @@ nks.true=nks
 
 #export results
 setwd('U:\\GIT_models\\git_LDA_MS')
-nome=paste(c('fake data','fake data cov'),'.csv',sep='')    
+nome=paste('fake data',ncommun,'.csv',sep='')    
 colnames(y)=paste('spp',1:nspp,sep='')
 rownames(y)=paste('loc',1:nloc,sep='')
-write.csv(y,nome[1])
-write.csv(xmat,nome[2],row.names=F)    
-
+write.csv(y,nome)    

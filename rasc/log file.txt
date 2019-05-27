@@ -1,33 +1,80 @@
-did not work with 5 groups and the following prior:
+Oct 31
 
-sig2.b0k=0.1
-lambda=0.1
-tmp=exp(-lambda*1:ncomm)
-tmp=tmp-min(tmp) #from 0
-tmp=tmp/max(tmp) #to 1
-mu.k=20*tmp
-#-------------------------------------------------
-check if code works assuming true number of groups and in the absence of strong priors: yes it works
-#-------------------------------------------------
-3 communities are identified well. 4th and 5th communities are mixed. 
+When I use probit formulation, I have to sample omega|delta and delta|omega
 
-Is this a sign that the prior is too strong or two weak? 
+The problem of this is that, when I sample omega|delta, a generate random variables from truncated normal distributions, where the truncation limits depend on the value of z_il. The problem is that even if we have tons of positive omegas and only a few negative omegas, depending on the value of the corresponding delta, we might end up with positive omegas equal to a bunch of zeroes (the lower bound) and some relatively large negative omegas
 
-This is probably a prior that is too strong given that it is preferable to have 2 b0k that are relatively small than one big and one small b0k 
-#-------------------------------------------------
-Can we estimate gamma (the exponential decay parameter that governs the prior variance?)
+As a result, when I then do delta|omega, delta is likely to be relatively negative, which is definitively not what the data suggests it should be.
+#-----------------------------------------
+Nov 8th
 
-Make gamma discrete so that we can sample from multinomial distribution
-#-------------------------------------------------
-The normal stick breaking prior seems to work with sig2=3.9 and betas=6.93 but there is a lot of noise on superfluous groups
+Works well with known mu and sd1. Careful attention has to be given when generating fake data since these data need to have the following characteristics:
 
-The normal stick breaking prior does not work with estimated sig2 but fixed betas=6.93
-#----------------------------------------------------------------
-Sept 19
+a) delta: delta's can't range to very small or very big values (MH with random walk does not work for this)
+b) theta: each group should dominate at least some locations for this to be estimable.
 
-My approximation to the stick breaking prior using the KL divergence criteria did not work very well
+delta's are not estimated very well for last groups. This might be due to the fact that we are using a very small sig2. As a result, we might be running  into delta x betas identifiability problems for these last groups as there is not much information on the data.
 
-it does NOT work very well for 3 groups
-it does NOT work very well for 5 groups
+estimate sig2
+#---------------------------------------
+April 3rd
 
+1) code works well when phi[4,]=phi.true[4,] and ncomm=4
+2) when I eliminate "phi[4,]=phi.true[4,]" but keep ncomm=4, does it still work? yes, it works!
+3) when I eliminate "phi[4,]=phi.true[4,]" but use ncomm=20, does it still work? yes, it works!
+#---------------------------------------
+April 9th
 
+1) code seems to work well with simple logistic regression but no gaussian second stage regression
+#---------------------------------------
+April 10
+
+Underlying Gaussian regression
+1) code works with ncomm.true=4
+2) code does not work with ncomm.true=9 regardless if I initialize the algorithm with the results from the unstructured LDA. 
+The problem is that the algorithm is lumping groups together. It seems that even the unstructure LDA lumps groups together.
+3) If I increase the number of species from 100 to 300, does this problem go away? No, we also need to:
+a - increase the number of trees in each location from 100-200 to 100-400
+b - change the prior for phi from Dirichet(1) to Dirichlet(0.1)
+
+It works for estimating theta!!! But what about betas and sig2?
+#------------------------------------------
+April 11
+
+1) Extreme values of delta might lead to very small changes in loglik. 
+Nevertheless, this would dramatically change the betas
+
+2) We can get the same theta values with 
+a) large sig2 and bad betas
+b) small sig2 and good betas
+#---------------------------------
+May 15
+
+Why not use logit-normal?
+- I don't like the MH random walk of delta (we run into issues when delta is very big or very small)
+- relationship between theta and beta is hard to understand if sigma2>0
+
+- With prior for E[beta0]=1, the model finds 10 groups (not 9). Something funny happens with comm 1 for theta. Response curves look good except for comm 8
+- With prior for E[beta0]=0, the model finds 10 groups (not 9). Something funny happens with comm 1 for theta. Response curves look good except for comm 8, but this looks better than before
+
+What happens when we assume that the number of groups is known? Almost perfect except for comm 8.
+
+What happens when we assume that the number of groups is known, is small (K=5), and we have weak priors for betas? theta.init is great but theta.estim is bad!
+
+Try more iterations and see if that helps with the scenario above. It doesn't help
+
+If we knew phi, would everything else work?
+#---------------------------------
+May 16
+
+1) Generate simulated data in exactly the same way that the gibbs sampler is set to work (i.e., sampling from normal distributions)
+
+2) Stick-breaking specification: we might have to revert back to exp(delta)/(1+sum(exp(delta))), either with sigma2=0 or sigma2>0. We will have to see if we can identify the right number of groups by using specific priors for the betas
+
+3) Drop stick-breaking specification: LDA with covariates but no determination of number of groups
+#-------------------------------------
+May 17
+
+One of the main problems is that the label of communities is unidentifiable but regression coefficients inherently depend on the baseline group (regardless if using stick-breaking prior or logit-normal distribution)
+
+theta is identifiable but minor changes in theta lead to drastic changes in stick-breaking weights V, which can screw up the regression coefficients

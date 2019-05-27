@@ -1,0 +1,25 @@
+May 22nd
+
+- see if model works assuming true number of groups is known: MU0=0, SD0=1. YES, IT WORKS
+- see if model works assuming true number of groups is unknown, try playing with the strength of the prior for mu given by sd0
+A) MU0=TSBP, SD0=1, NCOMM=10: DOESN'T WORK
+B) MU0=TSBP, SD0=1/(L x 0.1), NCOMM=10: DOESN'T WORK, ESTIMATES HUGE SIG2!
+C) MU0=TSBP, SD0=1/(L x 0.1), NCOMM=10, SIG2=1: works so so. Something is odd with first group. Perhaps I have to make sd0 weaker (i.e., larger) as this does not allow for big omegas and estimated thetas were always relatively far from 1
+D) MU0=TSBP, SD0=1/(L x 0.1), NCOMM=10, SIG2=10, this allows to deviate substantially from mu: Almost. Finds 6 groups. Notice that group 1 is well behaved now.
+E) MU0=TSBP, SD0=1/(L x 0.5), NCOMM=10, SIG2=10, made SD0 stronger/smaller. Did not help much
+F) MU0=TSBP, SD0=1/(L x 0.5), NCOMM=10, SIG2=10, increased sample size in each location (200-400 instead of 100-200): complete disaster!
+G) sample theta first, then sample z: predicted too many groups
+
+Tug-of-war between multinomial(y) and normal(omega). If sd of normal is too small, then normal almost always wins. The strength of the multinomial depends on the number of observations in each location.
+#---------------------------------
+May 23rd
+
+1) When estimating omega, use multinomial based on z's instead of y's: very bad!
+
+2) Generate data following exactly the same model. If I do this, then there won't be any structure to the thetas. That is fine. Perhaps we can have 5 groups with mu=0. The goal would be to identify the superfluous groups (i.e., groups with mu=-5)
+
+
+Try to limit the random walk behavior of omega when omega is extreme
+
+
+use t-distribution instead of normal distribution

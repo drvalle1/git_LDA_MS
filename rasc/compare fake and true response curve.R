@@ -18,11 +18,11 @@ for (i in 2:nparam){
   vmat.e=cbind(pnorm(media),1)
   theta.e=convertVtoTheta(vmat.e,rep(1,nloc))
   
-  # par(mfrow=c(2,1))
-  # plot(NA,NA,xlim=c(0,nloc),ylim=c(0,1),main=paste('true',i))
-  # for (j in 1:ncol(theta.t)) lines(1:nloc,theta.t[,j],col=j)
-  # plot(NA,NA,xlim=c(0,nloc),ylim=c(0,1),main=paste('estimated',i))
-  # for (j in 1:ncol(theta.e)) lines(1:nloc,theta.e[,j],col=j)
+  par(mfrow=c(2,1))
+  plot(NA,NA,xlim=c(0,nloc),ylim=c(0,1),main=paste('true',i))
+  for (j in 1:ncol(theta.t)) lines(1:nloc,theta.t[,j],col=j)
+  plot(NA,NA,xlim=c(0,nloc),ylim=c(0,1),main=paste('estimated',i))
+  for (j in 1:ncol(theta.e)) lines(1:nloc,theta.e[,j],col=j)
   
   par(mfrow=c(1,1))
   ind=which(theta.t[800,]==max(theta.t[800,]))

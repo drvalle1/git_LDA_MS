@@ -7,7 +7,7 @@ theta=matrix(res$theta[nrow(res$theta),],nloc,ncomm)
 boxplot(theta)
 
 #re-order theta
-true.ncomm=9
+true.ncomm=5
 res1=matrix(NA,true.ncomm,ncomm)
 for (i in 1:true.ncomm){
   for (j in 1:ncomm){
