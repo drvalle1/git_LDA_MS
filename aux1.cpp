@@ -101,11 +101,21 @@ NumericMatrix getw(IntegerMatrix ge, NumericMatrix psi, NumericMatrix pnorm1,Int
     for (int k=0; k<(ncomm-1); k++){
       NumericVector zneg=runif(ge(i,k+1),0.0,pnorm1(i,k));
       zneg=qnorm(zneg,psi(i,k),1.0);
+      zneg=ifelse(zneg < -30,-30,zneg); //to avoid zneg being -Inf
       NumericVector zpos=runif(nlk(i,k),pnorm1(i,k),1.0);
       zpos=qnorm(zpos,psi(i,k),1.0);
+      zpos=ifelse(zpos > 30,30,zpos); //to avoid zpos being Inf
       soma(i,k)=sum(zneg)+sum(zpos);
     }
   }
   
   return soma;
 }
+
+// // [[Rcpp::export]]
+// NumericVector teste(NumericVector x){
+//   
+//   NumericVector zneg=ifelse(is_infinite(x)==1,-30.0,x);
+// 
+//   return zneg;
+// }
