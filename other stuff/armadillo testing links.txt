@@ -1,0 +1,8 @@
+http://markovjumps.blogspot.com/2011/12/r-array-to-rcpparmadillo-cube.html
+https://gallery.rcpp.org/articles/optimizing-code-vs-recognizing-patterns-with-3d-arrays/
+http://lists.r-forge.r-project.org/pipermail/rcpp-devel/2014-February/007176.html
+http://dirk.eddelbuettel.com/code/rcpp/Rcpp-attributes.pdf
+https://gallery.rcpp.org/articles/setting-object-attributes/
+https://stackoverflow.com/questions/46688437/making-3d-array-with-armacube-in-rcpp-shows-cube-error
+https://stackoverflow.com/questions/21225662/calling-a-user-defined-r-function-from-c-using-rcpp
+https://www4.stat.ncsu.edu/~reich/BigData/code/doublematrix.html

@@ -1,0 +1,81 @@
+GetArrayP1 <- cxxfunction( signature(lphi = "matrix", lmedia='matrix',n = "integer") , '
+	Rcpp::IntegerVector dim(n);
+	Rcpp::NumericMatrix lphi1(lphi);
+	Rcpp::NumericMatrix lmedia1(lmedia);
+	arma::cube AY = arma::zeros<arma::cube>(dim[0], dim[1], dim[2]);
+	
+  for (int l = 0; l < dim[0]; l++) {
+    for (int s = 0; s < dim[1]; s++){
+      for (int k = 0; k < dim[2]; k++){
+        AY(l,s,k) = lphi1(k,s)+lmedia1(l,k);
+      }
+    }
+  }
+  
+	return(wrap(AY));', 
+                  plugin = "RcppArmadillo" )
+#---------------------------
+SampleZ <- cxxfunction( signature(nlk = "matrix", yls="matrix",nloc = "integer", ArrayP1="numeric",
+                                  nspp = "integer", ncomm = "integer",ArrayLSK="numeric") , '
+                                  
+	int nloc1=as<int>(nloc);
+	int nspp1=as<int>(nspp);
+	int ncomm1=as<int>(ncomm);
+	Rcpp::IntegerMatrix nlk1(nlk);
+	Rcpp::IntegerMatrix yls1(yls);
+	arma::cube AY = arma::zeros<arma::cube>(nloc1, nspp1, ncomm1);
+	Rcpp::IntegerVector NlkSel(nspp);
+	Rcpp::IntegerVector NlkStar(nspp);
+	NumericVector lprob(ncomm1);
+	NumericVector prob(ncomm1);
+	
+	//convert array into arma::cube
+  NumericVector vecArray(ArrayP1);
+  arma::cube ArrayP1a(vecArray.begin(), nloc1, nspp1, ncomm1, false);
+  
+  NumericVector vecArray1(ArrayLSK);
+  arma::cube ArrayLSKa(vecArray1.begin(), nloc1, nspp1, ncomm1, false);
+  
+  for (int l = 0; l < nloc1; l++) {
+    NlkSel=nlk1(l,_);
+    for (int s = 0; s < nspp1; s++){
+      if (yls1(l,s)!=0){ //just if individuals for l and s exist
+        for (int k = 0; k < ncomm1; k++){
+          if (ArrayLSKa(l,s,k)!=0){ //just if individuals for l, s, and k exist
+            for (int indiv = 0; indiv < ArrayLSKa(l,s,k); indiv++){ //loop for each individual
+              //adjust number of individuals (i.e., calculate n.stars)
+              NlkStar=Rcpp::clone(NlkSel);
+              NlkStar[k]=NlkSel[k]-1;
+
+              //sample z
+              for (int k1 = 0; k1 < ncomm1; k1++){
+                lprob[k1]=ArrayP1a(l,s,k1)-log(NlkStar[k1]+1);
+              }
+              
+              lprob=lprob-max(lprob);
+              lprob=exp(lprob);
+              lprob=lprob/sum(lprob);
+//#           z=rmultinom(1,size=1,prob=prob)
+//#           ind=which(z==1)
+//#           
+//#           #update matrices
+//#           nlk.star[ind]=nlk.star[ind]+1
+//#           nlk.sel=nlk.star
+//#           
+//#           #update arrays
+//#           array.lsk[l,s,k]=array.lsk[l,s,k]-1
+//#           array.lsk[l,s,ind]=array.lsk[l,s,ind]+1
+//#         }
+//#            
+            
+            ////////////////
+            }
+          }
+        }
+
+      }
+    }
+  }
+  
+	return(wrap(AY));', 
+                           plugin = "RcppArmadillo" )

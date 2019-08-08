@@ -20,7 +20,7 @@ dmat=data.matrix(dmat)
 
 #basic settings
 mu=3
-ncomm=4
+ncomm=10
 ngibbs=1000
 phi.prior=0.1
 nburn=ngibbs/2

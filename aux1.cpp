@@ -1,3 +1,5 @@
+// [[Rcpp::depends("RcppArmadillo")]]
+#include <RcppArmadillo.h>
 #include <Rcpp.h>
 #include <iostream>
 #include <ctime>
@@ -8,7 +10,7 @@ using namespace Rcpp;
 /*********************************                      UTILS          *****************************************************/
 /***************************************************************************************************************************/
 
-// This function makes multinomial draws
+// This function makes multiple multinomial draws
 // [[Rcpp::export]]
 IntegerVector rmultinom1(NumericVector runif1, NumericVector prob, int ncommun) {
   IntegerVector res(ncommun);
@@ -32,90 +34,91 @@ IntegerVector rmultinom1(NumericVector runif1, NumericVector prob, int ncommun) 
   return res;
 }
 
-//' This function samples z's
+// This function makes a single multinomial
 // [[Rcpp::export]]
-List samplez(NumericMatrix theta, NumericMatrix phi, IntegerMatrix y, int ncommun, int nloc, int nspp) {
+int RmultinomSingle(double runif1, NumericVector prob, int ncommun) {
+  double probcum = prob[0];
+  int oo=0;
   
-  IntegerMatrix nlk(nloc,ncommun);
-  IntegerMatrix nks(ncommun,nspp);
-  
-  NumericVector prob(ncommun);
-  IntegerVector znew(ncommun);
-  
-  for(int i=0; i<nloc; i++){
-    for (int j=0; j<nspp; j++){
-      for (int k=0; k<ncommun; k++){
-        prob(k)=theta(i,k)*phi(k,j);
+  while(runif1>probcum){
+    oo=oo+1;
+    probcum = probcum + prob[oo];
+  }
+  return oo;
+}
+
+// This function calculates ArrayP1a
+// [[Rcpp::export]]
+
+NumericVector GetArrayP1a(NumericMatrix lphi, NumericMatrix lmedia, int nloc, int nspp, int ncomm){
+  arma::cube AY = arma::zeros<arma::cube>(nloc, nspp, ncomm);
+
+  for (int l = 0; l < nloc; l++) {
+    for (int s = 0; s < nspp; s++){
+      for (int k = 0; k < ncomm; k++){
+        AY(l,s,k) = lphi(k,s)+lmedia(l,k);
       }
-      prob=prob/sum(prob);
+    }
+  }
 
-      //multinomial draw
-      znew=rmultinom1(runif(y(i,j)),prob,ncommun);
+  return(wrap(AY));
+}
+
+// This function samples z
+// [[Rcpp::export]]
+
+List SampleZ(IntegerMatrix nlk, IntegerMatrix yls, NumericVector ArrayP1,
+             int nloc, int nspp, int ncomm, NumericVector ArrayLSK, int ntot){
+  
+  //initialize objects
+  arma::cube ArrayLSKnew = arma::zeros<arma::cube>(nloc, nspp, ncomm);
+  NumericVector lprob(ncomm);
+  NumericVector prob(ncomm);
+  NumericVector runif1=runif(ntot); //generate uniform random variables (I have to fix this *2)
+  int ind;
+  int oo=0;
+
+  //convert array into arma::cube
+  NumericVector vecArray(ArrayP1);
+  arma::cube ArrayP1a(vecArray.begin(), nloc, nspp, ncomm, false);
+  NumericVector vecArray1(ArrayLSK);
+  arma::cube ArrayLSKa(vecArray1.begin(), nloc, nspp, ncomm, false);
+
+  for (int l = 0; l < nloc; l++) {
+    for (int s = 0; s < nspp; s++){
       
-      //add to results to export
-      nlk(i,_)=nlk(i,_)+znew;
-      nks(_,j)=nks(_,j)+znew;
+      //just proceed this if individuals for l and s exist
+      if (yls(l,s)!=0){ 
+        for (int k = 0; k < ncomm; k++){
+          
+          //just proceed if individuals for l, s, and k exist (logic problem right here)
+          if (ArrayLSKa(l,s,k)!=0){ 
+              for (int indiv = 0; indiv < ArrayLSKa(l,s,k); indiv++){ //loop for each individual
+                //adjust number of individuals (i.e., calculate NlkStar)
+                nlk(l,k)=nlk(l,k)-1;
+
+                //calculate probabilities
+                for (int k1 = 0; k1 < ncomm; k1++){
+                  lprob[k1]=ArrayP1a(l,s,k1)-log(nlk(l,k1)+1);
+                }
+                lprob=lprob-max(lprob);
+                lprob=exp(lprob);
+                prob=lprob/sum(lprob);
+                
+                //sample z
+                ind=RmultinomSingle(runif1[oo], prob, ncomm); 
+                oo=oo+1;
+                  
+                //update matrices and arrays
+                nlk(l,ind)=nlk(l,ind)+1;
+                ArrayLSKnew(l,s,ind)=ArrayLSKnew(l,s,ind)+1;
+              }
+          }
+        }
+      }
     }
   }
-  return List::create(Named("nlk") = nlk,
-                      Named("nks") = nks);
+
+  return Rcpp::List::create(Rcpp::Named("ArrayLSK") = ArrayLSKnew,
+                            Rcpp::Named("nlk") = nlk);
 }
-
-//' This function converts vmat into theta
-// [[Rcpp::export]]
-NumericMatrix convertVtoTheta(NumericMatrix vmat,
-                                NumericVector prod) {
-  NumericMatrix res(vmat.nrow(),vmat.ncol());
-  
-  for(int j=0; j<vmat.ncol();j++){
-    res(_,j)=vmat(_,j)*prod;    
-    prod=prod*(1-vmat(_,j));
-  }
-  
-  return (res);
-}
-
-//' This function calculates ngreater
-// [[Rcpp::export]]
-IntegerMatrix ngreater(IntegerMatrix nlk,int nloc, int ncommun){
-  IntegerMatrix ngreater(nloc,ncommun);
-  int oo=ncommun-1;
-  IntegerVector tmp(nloc);
-
-  while (oo>=0){
-    tmp=tmp+nlk(_,oo);
-    ngreater(_,oo)=tmp;
-    oo=oo-1;
-  }
-  return ngreater;
-}
-
-//' This function samples from truncated normal distrib and stores the sufficient statistics
-// [[Rcpp::export]]
-NumericMatrix getw(IntegerMatrix ge, NumericMatrix psi, NumericMatrix pnorm1,IntegerMatrix nlk,
-          int nloc, int ncomm){
-  
-  NumericMatrix soma(nloc,ncomm-1);
-
-  for(int i=0; i<nloc;i++){
-    for (int k=0; k<(ncomm-1); k++){
-      NumericVector zneg=runif(ge(i,k+1),0.0,pnorm1(i,k));
-      zneg=qnorm(zneg,psi(i,k),1.0);
-      zneg=ifelse(zneg < -30,-30,zneg); //to avoid zneg being -Inf
-      NumericVector zpos=runif(nlk(i,k),pnorm1(i,k),1.0);
-      zpos=qnorm(zpos,psi(i,k),1.0);
-      zpos=ifelse(zpos > 30,30,zpos); //to avoid zpos being Inf
-      soma(i,k)=sum(zneg)+sum(zpos);
-    }
-  }
-  
-  return soma;
-}
-
-// // [[Rcpp::export]]
-// NumericVector teste(NumericVector x){
-//   
-//   NumericVector zneg=ifelse(is_infinite(x)==1,-30.0,x);
-// 
-//   return zneg;
-// }

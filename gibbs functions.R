@@ -1,12 +1,3 @@
-get.w=function(nlk,psi,ncomm,nloc){
-  soma=matrix(NA,nloc,ncomm-1)
-  ge=ngreater(nlk=nlk,nloc=nloc,ncommun=ncomm) #greater or equal
-  pnorm1=pnorm(0,mean=psi,sd=1)
-  
-  soma=getw(ge=ge, psi=psi, pnorm1=pnorm1,nlk=nlk,nloc=nloc,ncomm=ncomm)
-  list(soma=soma,nge=ge)
-}    
-#-------------------------------------
 #this function generates dirichlet random variables (1 one for each row of alpha)
 rdirichlet1=function(alpha,ncomm,nspp){
   tmp=matrix(rgamma(n=ncomm*nspp,alpha,1),ncomm,nspp)
@@ -14,60 +5,91 @@ rdirichlet1=function(alpha,ncomm,nspp){
   tmp/soma
 }
 #---------------------------------------------
-get.psi=function(soma,nlk,sig2,mu,ncomm,theta,nks,change1,nburn,i,dmat,betas){
-  #re-order groups from largest to smallest
-  # if (i%%change1 == 0 & i<nburn){
-  #   med=colMeans(theta)
-  #   ind=order(med,decreasing=T)
-  #   ind1=ind[ind!=ncomm]
-  #   nlk=cbind(nlk[,ind1],nlk[,ncomm])
-  #   nks=rbind(nks[ind1,],nks[ncomm,])
-  #   soma=soma[,ind1] #I would probably have to re-run getw() to get correct soma. Before this, change psi
-  #   sig2=sig2[ind1]
-  #   betas=betas[,ind1]
-  # }
-
-  medias=mu+dmat%*%betas
-  nge=ngreater(nlk=nlk,nloc=nloc,ncommun=ncomm) #greater or equal
-  sig2.mat=matrix(sig2,nloc,ncomm-1,byrow=T)
-  prec=nge[,-ncomm]+(1/sig2.mat)
-  var1=1/prec
-  pmedia=soma+(medias/sig2.mat)
-  tmp=rnorm(nloc*(ncomm-1),mean=var1*pmedia,sd=sqrt(var1))
-  psi=matrix(tmp,nloc,ncomm-1)
+samplez.R=function(lphi, lmedia, array.lsk,nlk, ncomm,nloc, nspp,y){
+  #calculate part 1 of the log-probability of z
   
-  list(psi=psi,nlk=nlk,nks=nks,soma=soma,sig2=sig2,betas=betas)
+  # teste=array(NA,dim=c(nloc,nspp,ncomm))
+  # for (l in 1:nloc){
+  #   for (s in 1:nspp){
+  #     for (k in 1:ncomm){
+  #       teste[l,s,k]=lphi[k,s]+lmedia[l,k]
+  #     }
+  #   }
+  # }
+  tmp = GetArrayP1a(lphi=lphi,lmedia=lmedia,nloc=nloc,nspp=nspp,ncomm=ncomm)
+  array.p1 = array(tmp,dim=c(nloc,nspp,ncomm))
+  # sum(array.p1!=teste)
+  # identical(array.p1,teste)
+
+  #sample z
+  set.seed(1)
+  teste=SampleZ(nlk=nlk, yls=y, ArrayP1=array.p1,
+                nloc=nloc, nspp=nspp, ncomm=ncomm, ArrayLSK=array.lsk,ntot=sum(nlk))
+  # sum(array.lsk!=teste$ArrayLSK) #things have changed!
+  # identical(array.lsk,teste$ArrayLSK)
+  #sum(teste$ArrayLSK); sum(y)
+  
+  # set.seed(1)
+  # for (l in 1:nloc){
+  #   nlk.sel=nlk[l,]
+  # 
+  #   for (s in 1:nspp){
+  # 
+  #     if (y[l,s]!=0){ #there is no point in sampling z if 0 individuals
+  #       array.p1a=array.p1[l,s,]
+  #       qtt=array.lsk[l,s,]
+  #       indic=which(qtt!=0) #just work with those individuals that truly exist
+  #       
+  #       for (k in indic){
+  #         qtt1=qtt[k]
+  #         runif1=runif(qtt1)
+  #         for (indiv in 1:qtt1){
+  #           #adjust number of individuals (i.e., calculate n.star's)
+  #           nlk.star=nlk.sel
+  #           nlk.star[k]=nlk.star[k]-1
+  # 
+  #           #sample z
+  #           lprob=array.p1a-log(nlk.star+1)
+  #           lprob1=lprob-max(lprob)
+  #           tmp=exp(lprob1)
+  #           prob=tmp/sum(tmp)
+  #           ind=RmultinomSingle1(runif1[indiv], prob, ncomm)
+  # 
+  #           #update matrices
+  #           nlk.star[ind]=nlk.star[ind]+1
+  #           nlk.sel=nlk.star
+  # 
+  #           #update arrays
+  #           array.lsk[l,s,k]=array.lsk[l,s,k]-1
+  #           array.lsk[l,s,ind]=array.lsk[l,s,ind]+1
+  #         }
+  #       }
+  #     }
+  #   }
+  #   nlk[l,]=nlk.sel
+  # }
+  # sum(array.lsk!=teste$ArrayLSK) (cpp yields same results as R)
+  # identical(array.lsk,teste$ArrayLSK)
+  
+  #basic test
+  # sum(apply(teste$ArrayLSK,1:2,sum)!=y)
+  # sum(apply(teste$ArrayLSK,c(1,3),sum)!=teste$nlk)
+
+  list(nlk=teste$nlk,array.lsk=teste$ArrayLSK)        
 }
-#---------------------------------------------
-get.betas=function(psi,nloc,mu,sig2,ncomm,td=td,dtd=dtd,invT=invT,nparam=nparam){
-  betas=matrix(NA,nparam,ncomm-1)
-  for (i in 1:(ncomm-1)){
-    prec=(1/sig2[i])*dtd+invT
-    var1=solve(prec)
-    pmedia=(1/sig2[i])*td%*%(psi[,i]-mu)
-    betas[,i]=rmvnorm(1,var1%*%pmedia,var1)
-  }
-  betas
+#-------------------------------------------
+sample.lambdas=function(lambda.a,lambda.b,nlk,ncomm,nloc){
+  nk=apply(nlk,2,sum)
+  rgamma(ncomm,lambda.a+nk,lambda.b+nloc)
 }
-#---------------------------------------------
-get.sig2=function(psi,nloc,mu,ncomm,dmat,betas,pot.sig2){
-  p1=-(nloc/2)*log(pot.sig2)
-  p2=-(1/(2*pot.sig2))
-  media=mu+dmat%*%betas
-  err=psi-media
-  sig2=rep(NA,ncomm-1)
-  for (i in 1:(ncomm-1)){
-    sse=t(err[,i])%*%err[,i]
-    logp=p1+p2*as.numeric(sse)
-    logp1=logp-max(logp)
-    tmp=exp(logp1)
-    p3=tmp/sum(tmp)
-    # plot(p3,type='h',main=i)
-    
-    #multinomial draw
-    tmp=rmultinom(1,size=1,prob=p3)
-    ind=which(tmp==1)
-    sig2[i]=pot.sig2[ind]
+#----------------------------------------------
+RmultinomSingle1=function(runif1, prob, ncomm){
+  probcum = prob[1];
+  oo=1;
+  
+  while(runif1>probcum){
+    oo=oo+1;
+    probcum = probcum + prob[oo];
   }
-  sig2
+  oo;
 }

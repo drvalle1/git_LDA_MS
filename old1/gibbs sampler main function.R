@@ -17,7 +17,7 @@ lda.abundance.regression=function(dat,ncomm,phi.prior,ngibbs,mu,nburn,dmat){
   phi=matrix(1/nspp,ncomm,nspp)
   psi=matrix(0,nloc,ncomm-1)
   betas=matrix(0,nparam,ncomm-1)
-  sig2=rep(1,ncomm-1)
+  sig2=rep(3.72,ncomm-1)
   
   #to store outcomes from gibbs sampler
   theta.out=matrix(NA,ngibbs,ncomm*nloc)
@@ -44,7 +44,7 @@ lda.abundance.regression=function(dat,ncomm,phi.prior,ngibbs,mu,nburn,dmat){
 
     #get psi
     tmp=get.psi(soma=soma,nlk=nlk,sig2=sig2,mu=mu,ncomm=ncomm,theta=theta,nks=nks,change1=change1,
-                nburn=nburn,i=i,dmat=dmat,betas=betas)
+                nburn=nburn,i=i,dmat=dmat,betas=betas,psi=psi)
     psi=tmp$psi
     nlk=tmp$nlk
     nks=tmp$nks
@@ -57,14 +57,14 @@ lda.abundance.regression=function(dat,ncomm,phi.prior,ngibbs,mu,nburn,dmat){
     #sample phi
     phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
     
-    #sample betas
-    betas=get.betas(psi=psi,nloc=nloc,mu=mu,sig2=sig2,
-                    ncomm=ncomm,td=td,dtd=dtd,invT=invT,nparam=nparam)
-    
-    #sample sig2
-    sig2=get.sig2(psi=psi,nloc=nloc,mu=mu,ncomm=ncomm,dmat=dmat,betas=betas,pot.sig2=pot.sig2)
-    # sig2=c(1,2,1)
-    
+    #sample betas and sig2
+    betas=matrix(0,nparam,ncomm-1)
+    if (i>(nburn/2)){  #start by fitting regular LDA and only estimate betas and sig2 afterwards
+      betas=get.betas(psi=psi,nloc=nloc,mu=mu,sig2=sig2,
+                      ncomm=ncomm,td=td,dtd=dtd,invT=invT,nparam=nparam)
+      sig2=get.sig2(psi=psi,nloc=nloc,mu=mu,ncomm=ncomm,dmat=dmat,betas=betas,pot.sig2=pot.sig2)
+    }
+
     #calculate loglikelihood
     prob=theta%*%phi
     prob[prob>hi]=hi; prob[prob<lo]=lo
