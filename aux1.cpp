@@ -74,7 +74,8 @@ List SampleZ(IntegerMatrix nlk, IntegerMatrix yls, NumericVector ArrayP1,
   arma::cube ArrayLSKnew = arma::zeros<arma::cube>(nloc, nspp, ncomm);
   NumericVector lprob(ncomm);
   NumericVector prob(ncomm);
-  NumericVector runif1=runif(ntot); //generate uniform random variables (I have to fix this *2)
+  NumericVector runif1=runif(ntot); 
+  IntegerMatrix nlk1=clone(nlk);
   int ind;
   int oo=0;
 
@@ -95,11 +96,11 @@ List SampleZ(IntegerMatrix nlk, IntegerMatrix yls, NumericVector ArrayP1,
           if (ArrayLSKa(l,s,k)!=0){ 
               for (int indiv = 0; indiv < ArrayLSKa(l,s,k); indiv++){ //loop for each individual
                 //adjust number of individuals (i.e., calculate NlkStar)
-                nlk(l,k)=nlk(l,k)-1;
+                nlk1(l,k)=nlk1(l,k)-1;
 
                 //calculate probabilities
                 for (int k1 = 0; k1 < ncomm; k1++){
-                  lprob[k1]=ArrayP1a(l,s,k1)-log(nlk(l,k1)+1);
+                  lprob[k1]=ArrayP1a(l,s,k1)-log(nlk1(l,k1)+1);
                 }
                 lprob=lprob-max(lprob);
                 lprob=exp(lprob);
@@ -110,7 +111,7 @@ List SampleZ(IntegerMatrix nlk, IntegerMatrix yls, NumericVector ArrayP1,
                 oo=oo+1;
                   
                 //update matrices and arrays
-                nlk(l,ind)=nlk(l,ind)+1;
+                nlk1(l,ind)=nlk1(l,ind)+1;
                 ArrayLSKnew(l,s,ind)=ArrayLSKnew(l,s,ind)+1;
               }
           }
@@ -120,5 +121,5 @@ List SampleZ(IntegerMatrix nlk, IntegerMatrix yls, NumericVector ArrayP1,
   }
 
   return Rcpp::List::create(Rcpp::Named("ArrayLSK") = ArrayLSKnew,
-                            Rcpp::Named("nlk") = nlk);
+                            Rcpp::Named("nlk") = nlk1);
 }

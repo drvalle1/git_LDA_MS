@@ -1,0 +1,5 @@
+with only true lambda and betas, things work well
+
+with only true phi: betas and nlk are so so, lambda is bad
+
+with only true lambda: things are much worse! phi is really important!
