@@ -1,4 +1,5 @@
 # rm(list=ls(all=TRUE))
+library(MCMCpack)
 library('Rcpp')
 library('RcppArmadillo')
 set.seed(4)
@@ -54,8 +55,8 @@ llk.out=rep(NA,ngibbs)
 betas.out=matrix(NA,ngibbs,nparam*ncomm)
 
 #useful stuff for MH algorithm
-accept1=list(betas=matrix(0,nparam,ncomm))
-jump1=list(betas=matrix(1,nparam,ncomm))
+accept1=list(betas=matrix(0,nparam,ncomm),array.lsk=matrix(0,nloc,nspp))
+jump1=list(betas=matrix(1,nparam,ncomm),array.lsk=matrix(1,nloc,nspp))
 accept.output=50
 nadapt=ngibbs/2
 
@@ -65,19 +66,26 @@ for (i in 1:ngibbs){
   print(i)   
 
   #get log mean
-  llambda=matrix(log(lambda),nloc,ncomm,byrow=T)
-  lmedia=llambda+xmat%*%betas
+  media=matrix(lambda,nloc,ncomm,byrow=T)*exp(xmat%*%betas)
   
   #sample z
-  tmp=samplez.R(lphi=log(phi), lmedia=lmedia, array.lsk=array.lsk, y=y,
-              nlk=nlk, ncomm=ncomm,nloc=nloc, nspp=nspp)
-  nlk=tmp$nlk
-  array.lsk=tmp$array.lsk
+  # tmp=sample.array(nloc=nloc,nspp=nspp,ncomm=ncomm,jump1=jump1$array.lsk,
+  #                  array.lsk=array.lsk,y=y,media=media)
+  # accept1$array.lsk=accept1$array.lsk+tmp$accept.ls
+  # array.lsk=tmp$array.lsk
+  tmp = SampleArray(Arraylsk=array.lsk,nloc=nloc,nspp=nspp,ncomm=ncomm,
+                   jump1=jump1$array.lsk,y=y, 
+                   phi=phi,media=media,
+                   runif1=matrix(runif(nloc*nspp),nloc,nspp))
+  array.lsk=tmp$ArrayLSK
+  accept1$array.lsk=accept1$array.lsk+tmp$AcceptLS
+  nlk=apply(array.lsk,c(1,3),sum)
   nks=t(apply(array.lsk,2:3,sum))
-    
+  # nlk=nlk.true
+  
   #sample phi
-  # phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
-  phi=phi.true
+  phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
+  # phi=phi.true
   
   #sample betas
   tmp=sample.betas(lambda.a=lambda.a,lambda.b=lambda.b,nlk=nlk,xmat=xmat,betas=betas,
@@ -100,8 +108,12 @@ for (i in 1:ngibbs){
   
   #calculate loglikelihood
   p1=dpois(nlk,matrix(lambda,nloc,ncomm,byrow=T),log=T)
-  phi.tmp=phi; phi.tmp[phi.tmp<0.00001]=0.00001
-  p2=nks*log(phi.tmp)
+  # phi.tmp=phi; phi.tmp[phi.tmp<0.00001]=0.00001
+  p2=nks*log(phi)
+  
+  #get phi prior
+  #get betas prior
+  #get lambda prior
   
   #store results  
   llk.out[i]=sum(p1)+sum(p2)

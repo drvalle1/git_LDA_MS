@@ -10,12 +10,12 @@ using namespace Rcpp;
 /*********************************                      UTILS          *****************************************************/
 /***************************************************************************************************************************/
 
-// This function makes multiple multinomial draws
+// This function makes a multinomial draw for size>1
 // [[Rcpp::export]]
-IntegerVector rmultinom1(NumericVector runif1, NumericVector prob, int ncommun) {
-  IntegerVector res(ncommun);
+IntegerVector rmultinom1(NumericVector prob, int size) {
+  IntegerVector res(prob.length());
   double probcum = prob(0);
-  
+  NumericVector runif1=runif(size);
   NumericVector runif2 = Rcpp::clone(runif1);
   runif2.sort(false);
   int oo=0;
@@ -34,92 +34,127 @@ IntegerVector rmultinom1(NumericVector runif1, NumericVector prob, int ncommun) 
   return res;
 }
 
-// This function makes a single multinomial
+// This function calculates the multinomial distribution
 // [[Rcpp::export]]
-int RmultinomSingle(double runif1, NumericVector prob, int ncommun) {
-  double probcum = prob[0];
-  int oo=0;
+double ldmultinom(IntegerVector x, int size, NumericVector prob) {
+  NumericVector x1(x.length());
   
-  while(runif1>probcum){
-    oo=oo+1;
-    probcum = probcum + prob[oo];
-  }
-  return oo;
+  //convert from integer to numeric
+  for (int i = 0; i < x.length(); i++){
+    x1[i]=(double) x[i];
+  } 
+  
+  NumericVector res1=x1*log(prob);
+  double res=lgamma(size+1)+sum(res1 - lgamma(x+1));
+  return(res);
 }
 
-// This function calculates ArrayP1a
+
+// This function calcutes log of Poisson probability
+// [[Rcpp::export]]
+double ldpois1(int x,double lambda){
+  double res;
+  res=x*log(lambda)-lambda-lgamma(x+1);
+  return(res);
+}
+
+// This function implements the MH step
+// [[Rcpp::export]]
+int RcppAcceptMH(double lpOld,double lpNew, double runi){
+  double a=exp(lpNew-lpOld);
+  if (runi < a) return(2);
+  else return(1);
+}
+
+// This function samples Array.lsk
 // [[Rcpp::export]]
 
-NumericVector GetArrayP1a(NumericMatrix lphi, NumericMatrix lmedia, int nloc, int nspp, int ncomm){
-  arma::cube AY = arma::zeros<arma::cube>(nloc, nspp, ncomm);
-
+List SampleArray(NumericVector Arraylsk,int nloc, int nspp, int ncomm,
+                          NumericMatrix jump1,IntegerMatrix y, 
+                          NumericMatrix phi, NumericMatrix media,
+                          NumericMatrix runif1){
+  //convert array into arma::cube
+  NumericVector vecArray(Arraylsk);
+  arma::cube ArrayLSK1(vecArray.begin(), nloc, nspp, ncomm, false);
+  
+  //initialize stuff
+  IntegerMatrix AcceptLS(nloc,nspp);
+  IntegerMatrix TableOld(nspp,ncomm);
+  IntegerMatrix TableNew(nspp,ncomm);
+  NumericVector tmp(ncomm);
+  NumericVector PpropNew(ncomm);
+  NumericVector PpropOld(ncomm);
+  double lprobOldtoNew;
+  double lprobNewtoOld;
+  double ltargetOld;
+  double ltargetNew;
+  double lpriorOld;
+  double lpriorNew;
+  double lpOld;
+  double lpNew;
+  int k;
+  IntegerVector nkOld(ncomm);
+  IntegerVector nkNew(ncomm);
+  
   for (int l = 0; l < nloc; l++) {
+    //fill-in TableOld based on ArrayLSK1
     for (int s = 0; s < nspp; s++){
       for (int k = 0; k < ncomm; k++){
-        AY(l,s,k) = lphi(k,s)+lmedia(l,k);
+        TableOld(s,k)=ArrayLSK1(l,s,k);
       }
     }
-  }
-
-  return(wrap(AY));
-}
-
-// This function samples z
-// [[Rcpp::export]]
-
-List SampleZ(IntegerMatrix nlk, IntegerMatrix yls, NumericVector ArrayP1,
-             int nloc, int nspp, int ncomm, NumericVector ArrayLSK, int ntot){
-  
-  //initialize objects
-  arma::cube ArrayLSKnew = arma::zeros<arma::cube>(nloc, nspp, ncomm);
-  NumericVector lprob(ncomm);
-  NumericVector prob(ncomm);
-  NumericVector runif1=runif(ntot); 
-  IntegerMatrix nlk1=clone(nlk);
-  int ind;
-  int oo=0;
-
-  //convert array into arma::cube
-  NumericVector vecArray(ArrayP1);
-  arma::cube ArrayP1a(vecArray.begin(), nloc, nspp, ncomm, false);
-  NumericVector vecArray1(ArrayLSK);
-  arma::cube ArrayLSKa(vecArray1.begin(), nloc, nspp, ncomm, false);
-
-  for (int l = 0; l < nloc; l++) {
+    
     for (int s = 0; s < nspp; s++){
+      TableNew=clone(TableOld);
       
-      //just proceed this if individuals for l and s exist
-      if (yls(l,s)!=0){ 
-        for (int k = 0; k < ncomm; k++){
-          
-          //just proceed if individuals for l, s, and k exist (logic problem right here)
-          if (ArrayLSKa(l,s,k)!=0){ 
-              for (int indiv = 0; indiv < ArrayLSKa(l,s,k); indiv++){ //loop for each individual
-                //adjust number of individuals (i.e., calculate NlkStar)
-                nlk1(l,k)=nlk1(l,k)-1;
-
-                //calculate probabilities
-                for (int k1 = 0; k1 < ncomm; k1++){
-                  lprob[k1]=ArrayP1a(l,s,k1)-log(nlk1(l,k1)+1);
-                }
-                lprob=lprob-max(lprob);
-                lprob=exp(lprob);
-                prob=lprob/sum(lprob);
-                
-                //sample z
-                ind=RmultinomSingle(runif1[oo], prob, ncomm); 
-                oo=oo+1;
-                  
-                //update matrices and arrays
-                nlk1(l,ind)=nlk1(l,ind)+1;
-                ArrayLSKnew(l,s,ind)=ArrayLSKnew(l,s,ind)+1;
-              }
-          }
-        }
+      //propose new values for species s
+      for (int k = 0; k < ncomm; k++){
+        tmp[k]=TableOld(s,k)+jump1(l,s);  
+      }
+      PpropOld=tmp/sum(tmp);
+      TableNew(s,_)=rmultinom1(PpropOld, y(l,s));
+      
+      //calculate proposal lprobabilities
+      lprobOldtoNew=ldmultinom(TableNew(s,_),y(l,s),PpropOld);
+      for (int k = 0; k < ncomm; k++){
+        tmp[k]=TableNew(s,k)+jump1(l,s);  
+      }
+      PpropNew=tmp/sum(tmp);
+      lprobNewtoOld=ldmultinom(TableOld(s,_),y(l,s),PpropNew);
+      
+      //calculate target and prior lprobabilities
+      ltargetOld=0;
+      ltargetNew=0;
+      lpriorOld=0;
+      lpriorNew=0;
+      for (int k = 0; k < ncomm; k++){
+        nkOld[k]=sum(TableOld(_,k));
+        nkNew[k]=sum(TableNew(_,k));
+        ltargetOld=ltargetOld+ldmultinom(TableOld(_,k),nkOld[k],phi(k,_));
+        ltargetNew=ltargetNew+ldmultinom(TableNew(_,k),nkNew[k],phi(k,_));
+        lpriorOld=lpriorOld+ldpois1(nkOld[k],media(l,k));
+        lpriorNew=lpriorNew+ldpois1(nkNew[k],media(l,k));
+      }
+      
+      //MH: accept or reject proposal
+      lpOld=ltargetOld+lpriorOld+lprobOldtoNew;
+      lpNew=ltargetNew+lpriorNew+lprobNewtoOld;
+      k=RcppAcceptMH(lpOld,lpNew,runif1(l,s));
+      
+      if (k==2){
+        TableOld=clone(TableNew);
+        AcceptLS(l,s)=1;
+      }
+    }
+    
+    //fill-in ArrayLSK1 based on TableOld
+    for (int s = 0; s < nspp; s++){
+      for (int k = 0; k < ncomm; k++){
+        ArrayLSK1(l,s,k)=TableOld(s,k);
       }
     }
   }
-
-  return Rcpp::List::create(Rcpp::Named("ArrayLSK") = ArrayLSKnew,
-                            Rcpp::Named("nlk") = nlk1);
+  List L = List::create(Named("ArrayLSK") =ArrayLSK1, Named("AcceptLS") = AcceptLS);
+  
+  return(L);
 }

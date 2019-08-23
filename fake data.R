@@ -2,12 +2,12 @@ rm(list=ls(all=TRUE))
 library(MCMCpack)
 set.seed(5)
 
-nloc=5000
+nloc=500
 nspp=40
 ncommun=5
 
 #design matrix
-xmat=matrix(rnorm(nloc*ncommun),nloc,ncommun)
+xmat=matrix(rnorm(nloc*ncommun,sd=2),nloc,ncommun)
 
 #parameters
 lambda.true=lambda=runif(ncommun,min=10,max=12)
