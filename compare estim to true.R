@@ -1,4 +1,4 @@
-plot(llk.out[100:ngibbs],type='l')
+plot(llk.out[1:ngibbs],type='l')
 
 compare1=function(estim,true){
   rango=range(c(true,estim))

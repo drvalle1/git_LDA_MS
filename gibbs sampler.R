@@ -109,14 +109,22 @@ for (i in 1:ngibbs){
   #calculate loglikelihood
   p1=dpois(nlk,matrix(lambda,nloc,ncomm,byrow=T),log=T)
   # phi.tmp=phi; phi.tmp[phi.tmp<0.00001]=0.00001
-  p2=nks*log(phi)
-  
+  tmp=rowSums(nks*log(phi))
+  tmp1=lfactorial(rowSums(nks))-rowSums(lfactorial(nks))
+  p2=tmp+tmp1
+    
   #get phi prior
+  p3=ldirichlet(x=phi,alpha=phi.prior)
+  # log(ddirichlet(phi[2,],rep(phi.prior,nspp)))
+  
   #get betas prior
+  p4=dnorm(betas,mean=0,sd=1,log=T)
+  
   #get lambda prior
+  p5=dgamma(lambda,lambda.a,lambda.b,log=T)
   
   #store results  
-  llk.out[i]=sum(p1)+sum(p2)
+  llk.out[i]=sum(p1)+sum(p2)+sum(p3)+sum(p4)+sum(p5)
   phi.out[i,]=phi
   lambda.out[i,]=lambda
   nlk.out[i,]=nlk

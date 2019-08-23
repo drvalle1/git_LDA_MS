@@ -5,55 +5,17 @@ rdirichlet1=function(alpha,ncomm,nspp){
   tmp/soma
 }
 #---------------------------------------------
-sample.array=function(nloc,nspp,jump1,array.lsk,y,ncomm,media){
-  accept.ls=matrix(0,nloc,nspp)
-  
-  for (i in 1:nloc){
-    table.old=array.lsk[i,,]
-    for (j in 1:nspp){
-      table.new=table.old
-      
-      #propose new values for species j
-      tmp=table.old[j,]+jump1[i,j]
-      pprop.old=tmp/sum(tmp)
-      table.new[j,]=rmultinom(1,size=y[i,j],prob=pprop.old)
-      
-      #calculate proposal lprobabilities
-      lprob.old.to.new=ldmultinom1(x=table.new[j,],size=y[i,j],prob=pprop.old)
-      tmp=table.new[j,]+jump1[i,j]
-      pprop.new=tmp/sum(tmp)
-      lprob.new.to.old=ldmultinom1(x=table.old[j,],size=y[i,j],prob=pprop.new)
-
-      #calculate ltarget distribution
-      ltarget.old=ltarget.new=0
-      nk.old=colSums(table.old)
-      nk.new=colSums(table.new)
-      for (k in 1:ncomm){
-        ltarget.old=ltarget.old+ldmultinom1(x=table.old[,k],size=nk.old[k],prob=phi[k,])
-        ltarget.new=ltarget.new+ldmultinom1(x=table.new[,k],size=nk.new[k],prob=phi[k,])
-      }
-
-      #calculate lpriors
-      lprior.old=sum(dpois(nk.old,media[i,],log=T))
-      lprior.new=sum(dpois(nk.new,media[i,],log=T))
-      
-      #MH 
-      p0=ltarget.old+lprior.old+lprob.old.to.new
-      p1=ltarget.new+lprior.new+lprob.new.to.old
-      k=acceptMH(p0=p0,p1=p1,x0=1,x1=2,T)
-      if (k$x==2) {
-        table.old=table.new
-        accept.ls[i,j]=1
-      }
-    }
-    array.lsk[i,,]=table.old
-  }
-  list(array.lsk=array.lsk,accept.ls=accept.ls)
+ldirichlet=function(x,alpha){
+  n=ncol(alpha)
+  tmp=rowSums((alpha-1)*log(x))
+  invBeta1=lgamma(alpha*n)-n*lgamma(alpha)
+  invBeta1+tmp
 }
-#-------------------------------------------
+#---------------------------------------------
 ldmultinom1=function(size,x,prob){
   lgamma(size + 1) + sum(x * log(prob) - lgamma(x + 1))
 }
+#---------------------------------------------
 sample.lambdas=function(lambda.a,lambda.b,nlk,ncomm,nloc,xmat,betas){
   nk=apply(nlk,2,sum)
   media=exp(xmat%*%betas)
