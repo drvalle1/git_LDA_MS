@@ -1,0 +1,118 @@
+gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,lambda.a,lambda.b){
+  #basic settings
+  nparam=ncol(xmat)
+  nloc=nrow(y)
+  nspp=ncol(y)
+  
+  #initial values
+  betas=matrix(0,nparam,ncomm)
+  array.lsk=array(0,dim=c(nloc,nspp,ncomm))
+  for (i in 1:nloc){
+    for (j in 1:nspp){
+      if (y[i,j]!=0){
+        array.lsk[i,j,]=rmultinom(1,size=y[i,j],prob=rep(1/ncomm,ncomm))  
+      }
+    }
+  }
+
+  #basic test
+  # z=apply(array.lsk,1:2,sum)
+  # unique(y-z)
+  
+  nlk=apply(array.lsk,c(1,3),sum)
+  nks=t(apply(array.lsk,2:3,sum))
+  
+  lambda=apply(nlk,2,mean)
+  phi=matrix(1/nspp,ncomm,nspp)
+  
+  #to store outcomes from gibbs sampler
+  lambda.out=matrix(NA,ngibbs,ncomm)
+  phi.out=matrix(NA,ngibbs,nspp*ncomm)
+  nlk.out=matrix(NA,ngibbs,nloc*ncomm)
+  llk.out=rep(NA,ngibbs)
+  betas.out=matrix(NA,ngibbs,nparam*ncomm)
+  
+  #useful stuff for MH algorithm
+  accept1=list(betas=matrix(0,nparam,ncomm),array.lsk=matrix(0,nloc,nspp))
+  jump1=list(betas=matrix(1,nparam,ncomm),array.lsk=matrix(1,nloc,nspp))
+  accept.output=50
+  nadapt=ngibbs/2
+  
+  #run gibbs sampler
+  options(warn=2)
+  for (i in 1:ngibbs){
+    print(i)   
+    
+    #get log mean
+    media=matrix(lambda,nloc,ncomm,byrow=T)*exp(xmat%*%betas)
+    
+    #sample z
+    tmp = SampleArray(Arraylsk=array.lsk,nloc=nloc,nspp=nspp,ncomm=ncomm,
+                      jump1=jump1$array.lsk,y=y, 
+                      phi=phi,media=media,
+                      runif1=matrix(runif(nloc*nspp),nloc,nspp))
+    array.lsk=tmp$ArrayLSK
+    accept1$array.lsk=accept1$array.lsk+tmp$AcceptLS
+    nlk=apply(array.lsk,c(1,3),sum)
+    nks=t(apply(array.lsk,2:3,sum))
+    # nlk=nlk.true
+    
+    #sample phi
+    phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
+    # phi=phi.true
+    
+    #sample betas
+    tmp=sample.betas(lambda.a=lambda.a,lambda.b=lambda.b,nlk=nlk,xmat=xmat,betas=betas,
+                     ncomm=ncomm,nparam=nparam,jump1=jump1$betas)
+    betas=tmp$betas
+    accept1$betas=accept1$betas+tmp$accept
+    # betas=betas.true
+    
+    #sample lambdas
+    lambda=sample.lambdas(lambda.a=lambda.a,lambda.b=lambda.b,nlk=nlk,ncomm=ncomm,nloc=nloc,
+                          xmat=xmat,betas=betas)
+    # lambda=lambda.true
+    
+    #adaptive MH
+    if (i%%accept.output==0 & i<nadapt){
+      k=print.adapt(accept1z=accept1,jump1z=jump1,accept.output=accept.output)
+      accept1=k$accept1
+      jump1=k$jump1
+    }
+    
+    #calculate Poisson probabilities
+    p1=dpois(nlk,matrix(lambda,nloc,ncomm,byrow=T),log=T)
+    # phi.tmp=phi; phi.tmp[phi.tmp<0.00001]=0.00001
+    
+    #calculate multinomial probabilities
+    # p2=0
+    # for (l in 1:nloc){
+    #   for (k in 1:ncomm){
+    #     tmp=array.lsk[l,,k]
+    #     p2=p2+dmultinom(tmp,size=sum(tmp),prob=phi[k,],log=T)
+    #   }
+    # }
+    p2=LogLikMultin(nloc=nloc,ncomm=ncomm,nspp=nspp,phi=phi,Arraylsk=array.lsk)    
+    
+    #get phi prior
+    p3=ldirichlet(x=phi,alpha=phi.prior)
+    # log(ddirichlet(phi[2,],rep(phi.prior,nspp)))
+    
+    #get betas prior
+    p4=dnorm(betas,mean=0,sd=1,log=T)
+    
+    #get lambda prior
+    p5=dgamma(lambda,lambda.a,lambda.b,log=T)
+    
+    #store results  
+    llk.out[i]=sum(p1)+sum(p2)+sum(p3)+sum(p4)+sum(p5)
+    phi.out[i,]=phi
+    lambda.out[i,]=lambda
+    nlk.out[i,]=nlk
+    betas.out[i,]=betas
+  }
+
+  list(llk=llk.out,phi=phi.out,lambda=lambda.out,nlk=nlk.out,betas=betas.out)  
+}
+
+

@@ -50,7 +50,27 @@ double ldmultinom(IntegerVector x, int size, NumericVector prob) {
 }
 
 
-// This function calcutes log of Poisson probability
+// this function calculates the loglikelih based on multinomial
+// [[Rcpp::export]]
+double LogLikMultin(int nloc,int ncomm, int nspp, NumericMatrix phi, NumericVector Arraylsk){
+  double p2=0;
+  //convert array into arma::cube
+  NumericVector vecArray(Arraylsk);
+  arma::cube ArrayLSK1(vecArray.begin(), nloc, nspp, ncomm, false);
+  IntegerVector tmp(nspp);
+  
+  for (int l = 0; l < nloc; l++) {
+    for (int k = 0; k < ncomm; k++){
+      for (int s = 0; s < nspp; s++){
+        tmp[s]=ArrayLSK1(l,s,k);
+      }
+      p2=p2+ldmultinom(tmp,sum(tmp),phi(k,_));
+    }
+  }
+  return(p2);
+}
+
+// This function calculates log of Poisson probability
 // [[Rcpp::export]]
 double ldpois1(int x,double lambda){
   double res;
