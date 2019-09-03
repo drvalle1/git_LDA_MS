@@ -3,19 +3,29 @@ library(MCMCpack)
 set.seed(5)
 
 nloc=500
-nspp=40
-ncommun=5
+nspp=100
+ncommun=8
 
 #design matrix
-xmat=matrix(rnorm(nloc*ncommun,sd=2),nloc,ncommun)
+xmat=matrix(runif(nloc*ncommun,min=-1,max=1),nloc,ncommun)
+
+#pure sites
+tmp=matrix(-3,ncommun,ncommun)
+diag(tmp)=3
+for (i in 1:10){
+  seq1=(ncommun*(i-1)+1):(ncommun*i)
+  xmat[seq1,]=tmp
+}
+image(xmat[1:(10*ncommun),])
 
 #parameters
-lambda.true=lambda=runif(ncommun,min=10,max=12)
-betas.true=betas=diag(1,ncommun)
+lambda.true=lambda=runif(ncommun,min=2,max=3)
+betas.true=betas=diag(0.8,ncommun)
 
 #get means
 lambda1=matrix(lambda,nloc,ncommun,byrow=T)
 media=exp(log(lambda1)+xmat%*%betas); range(media)
+head(media)
 
 #generate N_lk
 nlk=matrix(NA,nloc,ncommun)

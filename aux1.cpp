@@ -105,45 +105,47 @@ List SampleArray(NumericVector Arraylsk,int nloc, int nspp, int ncomm,
     }
     
     for (int s = 0; s < nspp; s++){
-      TableNew=clone(TableOld);
-      
-      //propose new values for species s
-      for (int k = 0; k < ncomm; k++){
-        tmp[k]=TableOld(s,k)+jump1(l,s);  
-      }
-      PpropOld=tmp/sum(tmp);
-      TableNew(s,_)=rmultinom1(PpropOld, y(l,s));
-      
-      //calculate proposal lprobabilities
-      lprobOldtoNew=ldmultinom(TableNew(s,_),y(l,s),PpropOld);
-      for (int k = 0; k < ncomm; k++){
-        tmp[k]=TableNew(s,k)+jump1(l,s);  
-      }
-      PpropNew=tmp/sum(tmp);
-      lprobNewtoOld=ldmultinom(TableOld(s,_),y(l,s),PpropNew);
-      
-      //calculate target and prior lprobabilities
-      ltargetOld=0;
-      ltargetNew=0;
-      lpriorOld=0;
-      lpriorNew=0;
-      for (int k = 0; k < ncomm; k++){
-        nkOld[k]=sum(TableOld(_,k));
-        nkNew[k]=sum(TableNew(_,k));
-        ltargetOld=ltargetOld+ldmultinom(TableOld(_,k),nkOld[k],phi(k,_));
-        ltargetNew=ltargetNew+ldmultinom(TableNew(_,k),nkNew[k],phi(k,_));
-        lpriorOld=lpriorOld+ldpois1(nkOld[k],media(l,k));
-        lpriorNew=lpriorNew+ldpois1(nkNew[k],media(l,k));
-      }
-      
-      //MH: accept or reject proposal
-      lpOld=ltargetOld+lpriorOld+lprobOldtoNew;
-      lpNew=ltargetNew+lpriorNew+lprobNewtoOld;
-      k=RcppAcceptMH(lpOld,lpNew,runif1(l,s));
-      
-      if (k==2){
-        TableOld=clone(TableNew);
-        AcceptLS(l,s)=1;
+      if (y(l,s)>0){
+        TableNew=clone(TableOld);
+        
+        //propose new values for species s
+        for (int k = 0; k < ncomm; k++){
+          tmp[k]=TableOld(s,k)+jump1(l,s);  
+        }
+        PpropOld=tmp/sum(tmp);
+        TableNew(s,_)=rmultinom1(PpropOld, y(l,s));
+        
+        //calculate proposal lprobabilities
+        lprobOldtoNew=ldmultinom(TableNew(s,_),y(l,s),PpropOld);
+        for (int k = 0; k < ncomm; k++){
+          tmp[k]=TableNew(s,k)+jump1(l,s);  
+        }
+        PpropNew=tmp/sum(tmp);
+        lprobNewtoOld=ldmultinom(TableOld(s,_),y(l,s),PpropNew);
+        
+        //calculate target and prior lprobabilities
+        ltargetOld=0;
+        ltargetNew=0;
+        lpriorOld=0;
+        lpriorNew=0;
+        for (int k = 0; k < ncomm; k++){
+          nkOld[k]=sum(TableOld(_,k));
+          nkNew[k]=sum(TableNew(_,k));
+          ltargetOld=ltargetOld+ldmultinom(TableOld(_,k),nkOld[k],phi(k,_));
+          ltargetNew=ltargetNew+ldmultinom(TableNew(_,k),nkNew[k],phi(k,_));
+          lpriorOld=lpriorOld+ldpois1(nkOld[k],media(l,k));
+          lpriorNew=lpriorNew+ldpois1(nkNew[k],media(l,k));
+        }
+        
+        //MH: accept or reject proposal
+        lpOld=ltargetOld+lpriorOld+lprobOldtoNew;
+        lpNew=ltargetNew+lpriorNew+lprobNewtoOld;
+        k=RcppAcceptMH(lpOld,lpNew,runif1(l,s));
+        
+        if (k==2){
+          TableOld=clone(TableNew);
+          AcceptLS(l,s)=1;
+        }
       }
     }
     

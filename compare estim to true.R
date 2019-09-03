@@ -6,7 +6,7 @@ compare1=function(estim,true){
   lines(rango,rango)  
 }
 
-ordem=c(4,2,3,1,5)
+ordem=c(6,5,8,3,4,2,1,7)
 
 #look at lambda
 compare1(estim=lambda.out[ngibbs,ordem],true=lambda.true)
@@ -34,3 +34,9 @@ par(mfrow=c(3,2),mar=rep(1,4))
 for (i in 1:ncomm){
   plot(lambda.out[,i],type='l')
 }
+
+#look at jump
+z=jump1$array.lsk
+hist(z[y!=0]); table(z[y!=0])
+hist(z[y==0]); table(z[y==0])
+plot(jitter(y[y!=0]),jitter(jump1$array.lsk[y!=0]),ylim=c(0,20))

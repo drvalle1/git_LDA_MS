@@ -10,12 +10,12 @@ source('gibbs functions.R')
 sourceCpp('aux1.cpp')
 
 #get data
-dat=read.csv('fake data5.csv',as.is=T)
-xmat=data.matrix(read.csv('fake data xmat5.csv',as.is=T))
+dat=read.csv('fake data8.csv',as.is=T)
+xmat=data.matrix(read.csv('fake data xmat8.csv',as.is=T))
 y=data.matrix(dat)
 
 #basic settings
-ncomm=5
+ncomm=8
 ngibbs=1000
 nburn=ngibbs/2
 nparam=ncol(xmat)
@@ -106,13 +106,19 @@ for (i in 1:ngibbs){
     jump1=k$jump1
   }
   
-  #calculate loglikelihood
+  #calculate Poisson probabilities
   p1=dpois(nlk,matrix(lambda,nloc,ncomm,byrow=T),log=T)
   # phi.tmp=phi; phi.tmp[phi.tmp<0.00001]=0.00001
-  tmp=rowSums(nks*log(phi))
-  tmp1=lfactorial(rowSums(nks))-rowSums(lfactorial(nks))
-  p2=tmp+tmp1
-    
+  
+  #calculate multinomial probabilities (this can be made faster with rcpp)
+  p2=0
+  for (l in 1:nloc){
+    for (k in 1:ncomm){
+      tmp=array.lsk[l,,k]
+      p2=p2+dmultinom(tmp,size=sum(tmp),prob=phi[k,],log=T)
+    }
+  }
+
   #get phi prior
   p3=ldirichlet(x=phi,alpha=phi.prior)
   # log(ddirichlet(phi[2,],rep(phi.prior,nspp)))
