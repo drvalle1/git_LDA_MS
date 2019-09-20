@@ -34,6 +34,18 @@ IntegerVector rmultinom1(NumericVector prob, int size) {
   return res;
 }
 
+// Get lambda
+// [[Rcpp::export]]
+NumericVector GetLambda(NumericVector LogTheta, int ncomm) {
+  NumericVector res(ncomm);
+  res[0]=LogTheta[0];
+  for (int i = 1; i < ncomm; i++) {
+    res[i]=res[i-1]+LogTheta[i];
+  }
+  res=exp(res);
+  return res;
+}
+
 // This function calculates the multinomial distribution
 // [[Rcpp::export]]
 double ldmultinom(IntegerVector x, int size, NumericVector prob) {

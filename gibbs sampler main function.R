@@ -1,4 +1,4 @@
-gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,lambda.a,lambda.b){
+gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,a1,b1,a2,b2){
   #basic settings
   nparam=ncol(xmat)
   nloc=nrow(y)
@@ -21,9 +21,14 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,lambda.a,lambda.b){
   
   nlk=apply(array.lsk,c(1,3),sum)
   nks=t(apply(array.lsk,2:3,sum))
-  
+
+  phi=matrix(1/nspp,ncomm,nspp)  
   lambda=apply(nlk,2,mean)
-  phi=matrix(1/nspp,ncomm,nspp)
+  #get thetas
+  theta=get.theta.from.lambda(lambda=lambda,ncomm=ncomm)
+
+  #just checking
+  # teste=GetLambda(LogTheta=log(theta),ncomm=ncomm)
   
   #to store outcomes from gibbs sampler
   lambda.out=matrix(NA,ngibbs,ncomm)
@@ -43,34 +48,45 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,lambda.a,lambda.b){
   for (i in 1:ngibbs){
     print(i)   
     
+    #order communities according to size
+    if (i<nburn & i%%50==0){
+      ind=order(lambda,decreasing=T)
+      lambda=lambda[ind]
+      betas=betas[,ind]
+      phi=phi[ind,]
+      theta=get.theta.from.lambda(lambda=lambda,ncomm=ncomm)
+      array.lsk=array.lsk[,,ind]
+    }
+    
     #get log mean
     media=matrix(lambda,nloc,ncomm,byrow=T)*exp(xmat%*%betas)
     
     #sample z
     tmp = SampleArray(Arraylsk=array.lsk,nloc=nloc,nspp=nspp,ncomm=ncomm,
-                      jump1=jump1$array.lsk,y=y, 
+                      jump1=jump1$array.lsk,y=y,
                       phi=phi,media=media,
                       runif1=matrix(runif(nloc*nspp),nloc,nspp))
     array.lsk=tmp$ArrayLSK
     accept1$array.lsk=accept1$array.lsk+tmp$AcceptLS
     nlk=apply(array.lsk,c(1,3),sum)
     nks=t(apply(array.lsk,2:3,sum))
-    # nlk=nlk.true
+    # nlk=cbind(nlk.true,0,0)
     
     #sample phi
     phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
     # phi=phi.true
     
     #sample betas
-    tmp=sample.betas(lambda.a=lambda.a,lambda.b=lambda.b,nlk=nlk,xmat=xmat,betas=betas,
-                     ncomm=ncomm,nparam=nparam,jump1=jump1$betas)
-    betas=tmp$betas
-    accept1$betas=accept1$betas+tmp$accept
-    # betas=betas.true
+    # tmp=sample.betas(lambda=lambda,nlk=nlk,xmat=xmat,betas=betas,
+    #                  ncomm=ncomm,nparam=nparam,jump1=jump1$betas)
+    # betas=tmp$betas
+    # accept1$betas=accept1$betas+tmp$accept
+    betas=cbind(betas.true,0,0)
     
-    #sample lambdas
-    lambda=sample.lambdas(lambda.a=lambda.a,lambda.b=lambda.b,nlk=nlk,ncomm=ncomm,nloc=nloc,
-                          xmat=xmat,betas=betas)
+    #sample thetas
+    theta=sample.theta(theta=theta,a1=a1,b1=b1,a2=a2,b2=b2,nlk=nlk,ncomm=ncomm,nloc=nloc,
+                       xmat=xmat,betas=betas)
+    lambda=GetLambda(LogTheta=log(theta),ncomm=ncomm)
     # lambda=lambda.true
     
     #adaptive MH
@@ -84,14 +100,6 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,lambda.a,lambda.b){
     p1=dpois(nlk,matrix(lambda,nloc,ncomm,byrow=T),log=T)
     # phi.tmp=phi; phi.tmp[phi.tmp<0.00001]=0.00001
     
-    #calculate multinomial probabilities
-    # p2=0
-    # for (l in 1:nloc){
-    #   for (k in 1:ncomm){
-    #     tmp=array.lsk[l,,k]
-    #     p2=p2+dmultinom(tmp,size=sum(tmp),prob=phi[k,],log=T)
-    #   }
-    # }
     p2=LogLikMultin(nloc=nloc,ncomm=ncomm,nspp=nspp,phi=phi,Arraylsk=array.lsk)    
     
     #get phi prior
@@ -102,10 +110,10 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,lambda.a,lambda.b){
     p4=dnorm(betas,mean=0,sd=1,log=T)
     
     #get lambda prior
-    p5=dgamma(lambda,lambda.a,lambda.b,log=T)
+    p5=dgamma(theta[1],a1,b1,log=T)+sum(dgamma(theta[-1],a2,b2,log=T))
     
     #store results  
-    llk.out[i]=sum(p1)+sum(p2)+sum(p3)+sum(p4)+sum(p5)
+    llk.out[i]=sum(p1)+sum(p2)+sum(p3)+sum(p4)+p5
     phi.out[i,]=phi
     lambda.out[i,]=lambda
     nlk.out[i,]=nlk

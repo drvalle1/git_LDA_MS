@@ -6,11 +6,14 @@ compare1=function(estim,true){
   lines(rango,rango)  
 }
 
+k=res$lambda[ngibbs,]
+plot(k,type='h')
+
 k=res$betas[ngibbs,]
 nparam=ncol(xmat)
-k1=matrix(k,nparam,ncomm)
+k1=matrix(k,nparam,ncomm); round(k1,2)
 
-ordem=c(6,5,8,3,4,2,1,7)
+ordem=1:8#c(4,6,3,5,2,9,1,10) #4,6
 
 #look at lambda
 compare1(estim=res$lambda[ngibbs,ordem],true=lambda.true)

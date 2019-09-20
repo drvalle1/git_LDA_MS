@@ -1,3 +1,12 @@
+get.theta.from.lambda=function(lambda,ncomm){
+  theta=rep(NA,ncomm)
+  theta[1]=lambda[1]
+  for (i in 2:ncomm){
+    theta[i]=lambda[i]/prod(theta[1:(i-1)])
+  }
+  theta
+}
+#---------------------------------------------
 #this function generates dirichlet random variables (1 one for each row of alpha)
 rdirichlet1=function(alpha,ncomm,nspp){
   tmp=matrix(rgamma(n=ncomm*nspp,alpha,1),ncomm,nspp)
@@ -16,13 +25,26 @@ ldmultinom1=function(size,x,prob){
   lgamma(size + 1) + sum(x * log(prob) - lgamma(x + 1))
 }
 #---------------------------------------------
-sample.lambdas=function(lambda.a,lambda.b,nlk,ncomm,nloc,xmat,betas){
-  nk=apply(nlk,2,sum)
-  media=exp(xmat%*%betas)
-  rgamma(ncomm,lambda.a+nk,lambda.b+apply(media,2,sum))
+get.media=function(theta,xmat,betas,ncomm,nloc){
+  pmedia=exp(xmat%*%betas)
+  lambda=GetLambda(LogTheta=log(theta),ncomm=ncomm)
+  lambda1=matrix(lambda,nloc,ncomm,byrow=T)
+  lambda1*pmedia
+}
+#---------------------------------------------
+sample.theta=function(theta,a1,a2,b1,b2,nlk,ncomm,nloc,xmat,betas){
+  for (i in 1:ncomm){
+    soma.n=sum(nlk[,i:ncomm])
+    medias=get.media(theta,xmat,betas,ncomm,nloc)
+    p2=sum(medias[,i:ncomm])/theta[i]
+    if (i==1) theta[i]=rgamma(1,soma.n+a1,p2+b1)
+    if (i> 1) theta[i]=rgamma(1,soma.n+a2,p2+b2)
+    if (theta[i]<0.0000001) theta[i]=0.0000001 #to avoid numerical problems
+  }
+  theta
 }
 #----------------------------------------------
-sample.betas=function(lambda.a,lambda.b,nlk,xmat,betas,ncomm,nparam,jump1){
+sample.betas=function(lambda,nlk,xmat,betas,ncomm,nparam,jump1){
   betas.orig=betas.old=betas.prop=betas
   betas.prop[]=rnorm(nparam*ncomm,mean=betas.old,sd=jump1)
   for (i in 1:nparam){
@@ -34,15 +56,14 @@ sample.betas=function(lambda.a,lambda.b,nlk,xmat,betas,ncomm,nparam,jump1){
     p1.old=apply(nlk*lmedia.old,2,sum)
     p1.new=apply(nlk*lmedia.new,2,sum)
     
-    p2=lambda.a+apply(nlk,2,sum)
-    p3.old=log(lambda.b+apply(exp(lmedia.old),2,sum))
-    p3.new=log(lambda.b+apply(exp(lmedia.new),2,sum))
+    p2.old=-lambda*apply(exp(lmedia.old),2,sum)
+    p2.new=-lambda*apply(exp(lmedia.new),2,sum)
+
+    p3.old=(1/2)*(betas.old[i,]^2)
+    p3.new=(1/2)*(betas.new[i,]^2)
     
-    p4.old=(1/2)*(betas.old[i,]^2)
-    p4.new=(1/2)*(betas.new[i,]^2)
-    
-    pold=p1.old-p2*p3.old-p4.old
-    pnew=p1.new-p2*p3.new-p4.new
+    pold=p1.old+p2.old+p3.old
+    pnew=p1.new+p2.new+p3.new
     k=acceptMH(pold,pnew,betas.old[i,],betas.new[i,],F)
     betas.old[i,]=k$x
   }
@@ -81,8 +102,14 @@ print.adapt = function(accept1z,jump1z,accept.output){
   for (k in 1:length(jump1)){
     cond=(accept1[[k]]/accept.output)>0.4 & jump1[[k]]<100
     jump1[[k]][cond] = jump1[[k]][cond]*2       
-    cond=(accept1[[k]]/accept.output)<0.2 & jump1[[k]]>0.001
-    jump1[[k]][cond] = jump1[[k]][cond]*0.5
+    if (names(accept1)[k]!='array.lsk') {
+      cond=(accept1[[k]]/accept.output)<0.2 & jump1[[k]]>0.001
+      jump1[[k]][cond] = jump1[[k]][cond]*0.5
+    }
+    if (names(accept1)[k]=='array.lsk') {
+      cond=(accept1[[k]]/accept.output)<0.2 & jump1[[k]] >= 1
+      jump1[[k]][cond] = jump1[[k]][cond]*0.5
+    }
     accept1[[k]][]=0
   }
   

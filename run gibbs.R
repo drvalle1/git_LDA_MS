@@ -16,13 +16,16 @@ xmat=data.matrix(read.csv('fake data xmat8.csv',as.is=T))
 y=data.matrix(dat)
 
 #basic settings
-ncomm=8
+ncomm=10
 ngibbs=1000
 nburn=ngibbs/2
 phi.prior=0.1
-lambda.a=lambda.b=0.1
+a1=b1=1
+b2=20
+a2=10
 
 res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,nburn=nburn,y=y,xmat=xmat,
-                  phi.prior=phi.prior,lambda.a=lambda.a,lambda.b=lambda.b)
+                  phi.prior=phi.prior,a1=a1,b1=b1,a2=a2,b2=b2)
 
-
+plot(res$lambda[ngibbs,],type='h')
+plot(res$llk,type='l')
