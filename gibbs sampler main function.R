@@ -38,56 +38,58 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,a1,b1,a2,b2){
   betas.out=matrix(NA,ngibbs,nparam*ncomm)
   
   #useful stuff for MH algorithm
-  accept1=list(betas=matrix(0,nparam,ncomm),array.lsk=matrix(0,nloc,nspp))
-  jump1=list(betas=matrix(1,nparam,ncomm),array.lsk=matrix(1,nloc,nspp))
+  accept1=list(betas=matrix(0,nparam,ncomm))
+  jump1=list(betas=matrix(1,nparam,ncomm))
   accept.output=50
   nadapt=ngibbs/2
   
   #run gibbs sampler
   options(warn=2)
   for (i in 1:ngibbs){
-    print(i)   
-    
+    print(i)
+
     #order communities according to size
-    if (i<nburn & i%%50==0){
-      ind=order(lambda,decreasing=T)
-      lambda=lambda[ind]
-      betas=betas[,ind]
-      phi=phi[ind,]
-      theta=get.theta.from.lambda(lambda=lambda,ncomm=ncomm)
-      array.lsk=array.lsk[,,ind]
-    }
+    # if (i<nburn & i%%50==0){
+    #   ind=order(lambda,decreasing=T)
+    #   lambda=lambda[ind]
+    #   theta=get.theta.from.lambda(lambda=lambda,ncomm=ncomm)
+    #   
+    #   betas=betas[,ind]
+    #   phi=phi[ind,]
+    #   array.lsk=array.lsk[,,ind]
+    #   nlk=nlk[,ind]
+    # }
     
-    #get log mean
+    #get mean
     media=matrix(lambda,nloc,ncomm,byrow=T)*exp(xmat%*%betas)
-    
+
     #sample z
-    tmp = SampleArray(Arraylsk=array.lsk,nloc=nloc,nspp=nspp,ncomm=ncomm,
-                      jump1=jump1$array.lsk,y=y,
-                      phi=phi,media=media,
-                      runif1=matrix(runif(nloc*nspp),nloc,nspp))
+    tmp = SampleArray(Arraylsk=array.lsk, nloc=nloc,nspp=nspp,ncomm=ncomm,
+                      y=y,lphi=log(phi), lmedia=log(media),
+                      runif1=runif(sum(y)))
     array.lsk=tmp$ArrayLSK
-    accept1$array.lsk=accept1$array.lsk+tmp$AcceptLS
+    # array.lsk=array.lsk.true
     nlk=apply(array.lsk,c(1,3),sum)
     nks=t(apply(array.lsk,2:3,sum))
-    # nlk=cbind(nlk.true,0,0)
+    # nks=nks.true#rbind(nks.true,0,0)
+    # nlk=nlk.true#cbind(nlk.true,0,0)
     
     #sample phi
-    phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
-    # phi=phi.true
+    # phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
+    phi=phi.true #rbind(phi.true,0,0)
     
     #sample betas
     # tmp=sample.betas(lambda=lambda,nlk=nlk,xmat=xmat,betas=betas,
     #                  ncomm=ncomm,nparam=nparam,jump1=jump1$betas)
     # betas=tmp$betas
     # accept1$betas=accept1$betas+tmp$accept
-    betas=cbind(betas.true,0,0)
+    betas=betas.true#cbind(betas.true,0,0)
     
     #sample thetas
-    theta=sample.theta(theta=theta,a1=a1,b1=b1,a2=a2,b2=b2,nlk=nlk,ncomm=ncomm,nloc=nloc,
-                       xmat=xmat,betas=betas)
-    lambda=GetLambda(LogTheta=log(theta),ncomm=ncomm)
-    # lambda=lambda.true
+    # theta=sample.theta(theta=theta,a1=a1,b1=b1,a2=a2,b2=b2,nlk=nlk,ncomm=ncomm,nloc=nloc,
+    #                    xmat=xmat,betas=betas)
+    # lambda=GetLambda(LogTheta=log(theta),ncomm=ncomm)
+    lambda=lambda.true#c(lambda.true,0.01,0.01)
     
     #adaptive MH
     if (i%%accept.output==0 & i<nadapt){
@@ -97,7 +99,8 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,a1,b1,a2,b2){
     }
     
     #calculate Poisson probabilities
-    p1=dpois(nlk,matrix(lambda,nloc,ncomm,byrow=T),log=T)
+    media=matrix(lambda,nloc,ncomm,byrow=T)*exp(xmat%*%betas)
+    p1=dpois(nlk,media,log=T)
     # phi.tmp=phi; phi.tmp[phi.tmp<0.00001]=0.00001
     
     p2=LogLikMultin(nloc=nloc,ncomm=ncomm,nspp=nspp,phi=phi,Arraylsk=array.lsk)    

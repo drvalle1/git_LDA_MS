@@ -102,14 +102,8 @@ print.adapt = function(accept1z,jump1z,accept.output){
   for (k in 1:length(jump1)){
     cond=(accept1[[k]]/accept.output)>0.4 & jump1[[k]]<100
     jump1[[k]][cond] = jump1[[k]][cond]*2       
-    if (names(accept1)[k]!='array.lsk') {
-      cond=(accept1[[k]]/accept.output)<0.2 & jump1[[k]]>0.001
-      jump1[[k]][cond] = jump1[[k]][cond]*0.5
-    }
-    if (names(accept1)[k]=='array.lsk') {
-      cond=(accept1[[k]]/accept.output)<0.2 & jump1[[k]] >= 1
-      jump1[[k]][cond] = jump1[[k]][cond]*0.5
-    }
+    cond=(accept1[[k]]/accept.output)<0.2 & jump1[[k]]>0.001
+    jump1[[k]][cond] = jump1[[k]][cond]*0.5
     accept1[[k]][]=0
   }
   

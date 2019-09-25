@@ -13,14 +13,15 @@ k=res$betas[ngibbs,]
 nparam=ncol(xmat)
 k1=matrix(k,nparam,ncomm); round(k1,2)
 
-ordem=1:8#c(4,6,3,5,2,9,1,10) #4,6
+ordem=1:8
 
 #look at lambda
 compare1(estim=res$lambda[ngibbs,ordem],true=lambda.true)
 
 #look at nlk
-tmp=matrix(res$nlk[ngibbs,],nloc,ncomm)
-compare1(estim=tmp[,ordem],true=nlk.true)
+tmp=matrix(res$nlk[ngibbs,],nloc,ncomm); tmp[495,]
+boxplot(tmp)
+compare1(estim=jitter(tmp[,ordem]),true=jitter(nlk.true))
 
 #look at betas
 k=matrix(res$betas[ngibbs,],nparam,ncomm)

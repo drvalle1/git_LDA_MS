@@ -3,7 +3,7 @@ library(MCMCpack)
 set.seed(5)
 
 nloc=500
-nspp=100
+nspp=20
 ncommun=8
 
 #design matrix
@@ -19,8 +19,8 @@ for (i in 1:10){
 image(xmat[1:(10*ncommun),])
 
 #parameters
-lambda.true=lambda=runif(ncommun,min=2,max=3)
-betas.true=betas=diag(0.8,ncommun)
+lambda.true=lambda=runif(ncommun,min=2,max=4)
+betas.true=betas=diag(1,ncommun)
 
 #get means
 lambda1=matrix(lambda,nloc,ncommun,byrow=T)
@@ -28,6 +28,7 @@ media=exp(log(lambda1)+xmat%*%betas); range(media)
 head(media)
 
 #generate N_lk
+par(mfrow=c(1,1),mar=rep(4,4))
 nlk=matrix(NA,nloc,ncommun)
 for (i in 1:ncommun){
   nlk[,i]=rpois(nloc,media[,i])
@@ -40,6 +41,12 @@ sum(nl)
 
 #generate phi (assuming that each species is strongly present in a single group) 
 phi=rdirichlet(ncommun,alpha=rep(0.1,nspp))
+
+par(mfrow=c(4,2),mar=rep(1,4))
+for (i in 1:ncommun) plot(phi[,i],type='h')
+
+par(mfrow=c(4,2),mar=rep(1,4))
+for (i in 1:ncommun) plot(phi[i,],type='h')
 
 # for (i in 1:nspp){ #add some zeroes
 #   ind=sample(1:ncommun,size=1)
@@ -54,21 +61,23 @@ phi.true=phi
 image(phi)
 
 #generate actual observations y
-y=matrix(NA,nloc,nspp)
-nks=matrix(0,ncommun,nspp)
+array.lsk=array(0,dim=c(nloc,nspp,ncommun))
 for (i in 1:nloc){
-  tmp1=rep(0,nspp)
   for (k in 1:ncommun){
-    tmp=rmultinom(1,size=nlk[i,k],prob=phi[k,])
-    nks[k,]=nks[k,]+tmp
-    tmp1=tmp1+tmp
+    array.lsk[i,,k]=rmultinom(1,size=nlk[i,k],prob=phi[k,])
   }
-  y[i,]=tmp1
 }
+array.lsk.true=array.lsk
+y=apply(array.lsk,c(1,2),sum)
+nks=t(apply(array.lsk,c(2,3),sum))
 image(y)
 
+#checking if it makes sense
+plot(apply(array.lsk,c(1,3),sum),nlk)
+lines(c(0,1000),c(0,1000))
+
 #look at stuff to make sure it makes sense
-phi.estim=nks/matrix(rowSums(nks),ncommun,nspp,)
+phi.estim=nks/matrix(rowSums(nks),ncommun,nspp)
 plot(phi.true,phi.estim)
 nks.true=nks
 
