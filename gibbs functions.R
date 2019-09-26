@@ -44,7 +44,7 @@ sample.theta=function(theta,a1,a2,b1,b2,nlk,ncomm,nloc,xmat,betas){
   theta
 }
 #----------------------------------------------
-sample.betas=function(lambda,nlk,xmat,betas,ncomm,nparam,jump1){
+sample.betas=function(nlk,xmat,betas,ncomm,nparam,jump1,a.gamma,b.gamma){
   betas.orig=betas.old=betas.prop=betas
   betas.prop[]=rnorm(nparam*ncomm,mean=betas.old,sd=jump1)
   for (i in 1:nparam){
@@ -53,17 +53,21 @@ sample.betas=function(lambda,nlk,xmat,betas,ncomm,nparam,jump1){
     
     lmedia.old=xmat%*%betas.old
     lmedia.new=xmat%*%betas.new
-    p1.old=apply(nlk*lmedia.old,2,sum)
-    p1.new=apply(nlk*lmedia.new,2,sum)
+    p1.old=colSums(nlk*lmedia.old)
+    p1.new=colSums(nlk*lmedia.new)
     
-    p2.old=-lambda*apply(exp(lmedia.old),2,sum)
-    p2.new=-lambda*apply(exp(lmedia.new),2,sum)
+    p2=a.gamma+colSums(nlk)
 
-    p3.old=(1/2)*(betas.old[i,]^2)
-    p3.new=(1/2)*(betas.new[i,]^2)
+    media.old=exp(lmedia.old)
+    media.new=exp(lmedia.new)
+    p3.old=log(b.gamma+colSums(media.old))
+    p3.new=log(b.gamma+colSums(media.new))
     
-    pold=p1.old+p2.old+p3.old
-    pnew=p1.new+p2.new+p3.new
+    prior.old=(1/2)*(betas.old[i,]^2)
+    prior.new=(1/2)*(betas.new[i,]^2)
+    
+    pold=p1.old-p2*p3.old+prior.old
+    pnew=p1.new-p2*p3.new+prior.new
     k=acceptMH(pold,pnew,betas.old[i,],betas.new[i,],F)
     betas.old[i,]=k$x
   }

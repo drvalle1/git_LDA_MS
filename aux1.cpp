@@ -78,8 +78,9 @@ double LogLikMultin(int nloc,int ncomm, int nspp, NumericMatrix phi, NumericVect
 // [[Rcpp::export]]
 
 List SampleArray(NumericVector Arraylsk, int nloc, int nspp, int ncomm,
-                 IntegerMatrix y, NumericMatrix lphi, NumericMatrix lmedia,
-                 NumericVector runif1){
+                 IntegerMatrix y, NumericMatrix lp1,
+                 NumericVector runif1, IntegerVector nk, IntegerMatrix nks,
+                 double PriorPhi, double agamma){
   
   //convert array into arma::cube
   NumericVector vecArray=clone(Arraylsk);
@@ -100,10 +101,12 @@ List SampleArray(NumericVector Arraylsk, int nloc, int nspp, int ncomm,
             for (int i = 0; i < ArrayLSK1Orig(l,s,k); i++){
               //remove i-th individual
               ArrayLSK1(l,s,k)=ArrayLSK1(l,s,k)-1;
+              nks(k,s)=nks(k,s)-1;
+              nk[k]=nk[k]-1;
               
               //calculate assignment probabilities
               for (int k1 = 0; k1 < ncomm; k1++){
-                prob[k1]=lphi(k1,s)+lmedia(l,k1)-log(ArrayLSK1(l,s,k1)+1);  
+                prob[k1]=lp1(l,k1)+log(nks(k1,s)+PriorPhi)+log(agamma+nk[k1])-log(nk[k1]+nspp*PriorPhi)-log(ArrayLSK1(l,s,k1)+1);  
               }
               prob=prob-max(prob);
               prob=exp(prob);
@@ -115,6 +118,8 @@ List SampleArray(NumericVector Arraylsk, int nloc, int nspp, int ncomm,
               
               //update counts
               ArrayLSK1(l,s,ind)=ArrayLSK1(l,s,ind)+1;
+              nks(ind,s)=nks(ind,s)+1;
+              nk[ind]=nk[ind]+1;
             }
           }
         }
