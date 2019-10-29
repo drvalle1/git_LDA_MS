@@ -6,9 +6,7 @@ set.seed(10)
 
 #get functions
 setwd('U:\\GIT_models\\git_LDA_MS')
-source('gibbs sampler main function.R')
-source('gibbs functions.R')
-sourceCpp('aux1.cpp')
+source('LDA cov main function.R')
 
 #get data
 dat=read.csv('fake data8.csv',as.is=T)
@@ -16,7 +14,7 @@ xmat=data.matrix(read.csv('fake data xmat8.csv',as.is=T))
 y=data.matrix(dat)
 
 #basic settings
-ncomm=8
+ncomm=5
 ngibbs=1001
 nburn=ngibbs/2
 phi.prior=0.01
