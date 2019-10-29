@@ -4,7 +4,7 @@ set.seed(1)
 
 nloc=1000
 nspp=100
-ncommun=5
+ncommun=8
 
 #design matrix
 xmat=matrix(runif(nloc*ncommun,min=-1,max=1),nloc,ncommun)
@@ -12,8 +12,8 @@ xmat=matrix(runif(nloc*ncommun,min=-1,max=1),nloc,ncommun)
 #pure sites
 tmp=matrix(-3,ncommun,ncommun)
 diag(tmp)=3
-num1=floor(nloc/ncommun)
-for (i in 1:120){
+num1=floor(nloc/ncommun); num1
+for (i in 1:90){
   seq1=(ncommun*(i-1)+1):(ncommun*i)
   xmat[seq1,]=tmp
 }
@@ -49,15 +49,18 @@ plot(media,nlk)
 
 phi=matrix(0.01,ncommun,nspp)
 num=floor(nspp/ncommun)
+tmp=rep(NA,nspp)
 for (i in 1:nspp){
-  n=rbinom(1,size=1,prob=0.1)+1
+  n=rbinom(1,size=2,prob=0.1)+1
+  tmp[i]=n
   ind=sample(1:ncommun,size=n)
   phi[ind,i]=1
 }
+table(tmp)
 phi.true=phi=phi/matrix(apply(phi,1,sum),ncommun,nspp)
 apply(phi,1,sum)
 
-image(phi[,1:20])
+image(phi[,1:50])
 
 #per species
 par(mfrow=c(4,2),mar=rep(1,4))

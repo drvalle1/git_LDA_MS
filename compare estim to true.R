@@ -13,7 +13,7 @@ k=res$betas[ngibbs,]
 nparam=ncol(xmat)
 k1=matrix(k,nparam,ncomm); round(k1,2)
 
-ordem=c(5,3,4,2,1)
+ordem=c(6,7,3,2,1,8,5,4)
 round(k1[,ordem],2)
 
 #look at nlk
