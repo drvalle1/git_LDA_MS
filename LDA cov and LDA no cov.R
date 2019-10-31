@@ -14,7 +14,7 @@ LDAcov=function(y,xmat,ncomm,phi.prior,a.gamma,b.gamma,ngibbs,nburn,var.betas){
   
   nloc=nrow(y)
   nspp=ncol(y)
-  array.lsk.init=array(res$array.lsk[ngibbs,],dim=c(nloc,nspp,ncomm))
+  array.lsk.init=res$array.lsk
   #----------------------------------------
   #LDA with covariates
   

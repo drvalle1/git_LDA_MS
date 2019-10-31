@@ -13,8 +13,12 @@ k=res$betas[ngibbs,]
 nparam=ncol(xmat)
 k1=matrix(k,nparam,ncomm); round(k1,2)
 
-ordem=c(6,7,3,2,1,8,5,4)
+ordem=rep(NA,ncomm)
+for (i in 1:ncomm){
+  ordem[i]=which(k1[i,]==max(k1[i,]))
+}
 round(k1[,ordem],2)
+image(k1[,ordem])
 
 #look at nlk
 tmp=matrix(res$nlk[ngibbs,],nloc,ncomm); 
