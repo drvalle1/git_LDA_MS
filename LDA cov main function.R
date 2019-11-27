@@ -10,6 +10,7 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
   nlk=apply(array.lsk,c(1,3),sum)
   betas=matrix(0,nparam,ncomm)
   lambda=rep(0,ncomm)
+  options(warn=-1) #sometimes I get "glm.fit: fitted rates numerically 0 occurred" here
   for (i in 1:ncomm){
     dat.tmp=cbind(nlk[,i],xmat)
     colnames(dat.tmp)=c('y',paste0('cov',1:ncol(xmat)))
@@ -18,6 +19,7 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     lambda[i]=exp(res$coef[1])
     betas[,i]=res$coef[-1]
   }
+  options(warn=2)
   nks=t(apply(array.lsk,2:3,sum))
   phi=nks/apply(nks,1,sum); apply(phi,1,sum)
 

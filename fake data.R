@@ -1,26 +1,26 @@
 rm(list=ls(all=TRUE))
 library(MCMCpack)
-set.seed(1)
+set.seed(30)
 
 nloc=1000
 nspp=100
-ncommun=8
+ncommun=5
 
 #design matrix
-xmat=matrix(runif(nloc*ncommun,min=-1,max=1),nloc,ncommun)
+xmat=matrix(runif(nloc*ncommun,min=-3,max=3),nloc,ncommun)
 
 #pure sites
 tmp=matrix(-3,ncommun,ncommun)
 diag(tmp)=3
-num1=floor(nloc/ncommun); num1
-for (i in 1:90){
+num1=floor(nloc/ncommun)
+for (i in 1:120){
   seq1=(ncommun*(i-1)+1):(ncommun*i)
   xmat[seq1,]=tmp
 }
-image(xmat[1:(num1*ncommun),])
+# image(xmat[1:(num1*ncommun),])
 
 #parameters
-lambda.true=lambda=runif(ncommun,min=3,max=5)
+lambda.true=lambda=runif(ncommun,min=4,max=7)
 betas.true=betas=diag(1,ncommun)
 
 #get means
@@ -35,7 +35,7 @@ for (i in 1:ncommun){
   nlk[,i]=rpois(nloc,media[,i])
 }
 nlk.true=nlk; boxplot(nlk)
-z=nlk/apply(nlk,1,sum); apply(z,1,sum); boxplot(z); apply(z,2,range); apply(z>0.6,2,mean)
+z=nlk/apply(nlk,1,sum); apply(z,1,sum); boxplot(z); apply(z,2,range); apply(z>0.9,2,mean)
 nl=apply(nlk,1,sum)
 hist(nl)
 sum(nl)
@@ -49,22 +49,19 @@ plot(media,nlk)
 
 phi=matrix(0.01,ncommun,nspp)
 num=floor(nspp/ncommun)
-tmp=rep(NA,nspp)
 for (i in 1:nspp){
-  n=rbinom(1,size=2,prob=0.1)+1
-  tmp[i]=n
+  n=rbinom(1,size=1,prob=0.1)+1
   ind=sample(1:ncommun,size=n)
   phi[ind,i]=1
 }
-table(tmp)
 phi.true=phi=phi/matrix(apply(phi,1,sum),ncommun,nspp)
 apply(phi,1,sum)
 
-image(phi[,1:50])
+image(phi[,1:20])
 
 #per species
 par(mfrow=c(4,2),mar=rep(1,4))
-for (i in 1:(ncommun*2)) plot(phi[,i]/sum(phi[,i]),type='h')
+for (i in 1:(ncommun*2)) plot(phi[,i]/sum(phi[,i]),type='h',ylim=c(0,1))
 
 par(mfrow=c(4,2),mar=rep(1,4))
 for (i in 1:ncommun) plot(phi[i,],type='h')
