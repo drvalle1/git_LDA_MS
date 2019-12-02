@@ -1,10 +1,10 @@
 rm(list=ls(all=TRUE))
 library(MCMCpack)
-set.seed(30)
+set.seed(40)
 
 nloc=1000
 nspp=100
-ncommun=5
+ncommun=8
 
 #design matrix
 xmat=matrix(runif(nloc*ncommun,min=-3,max=3),nloc,ncommun)
@@ -43,10 +43,6 @@ sum(nl)
 plot(media,nlk)
 
 #generate phi (assuming that each species is strongly present in a single group) 
-# x=0:4
-# z=dbinom(x,size=4,prob=0.05)
-# plot(x+1,z,type='h')
-
 phi=matrix(0.01,ncommun,nspp)
 num=floor(nspp/ncommun)
 for (i in 1:nspp){

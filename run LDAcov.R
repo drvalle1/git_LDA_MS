@@ -14,7 +14,7 @@ nspp=ncol(y)
 
 #get array.lsk
 tmp=read.csv('array lsk.csv',as.is=T)
-ncomm=5 #this was estimated based on a previous step
+ncomm=8 #this was estimated based on a previous step
 array.lsk=array(tmp$V1,dim=c(nloc,nspp,ncomm))
 
 #basic settings
@@ -40,3 +40,4 @@ res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,nburn=nburn,y=y,xmat=xmat,
                   phi.prior=phi.prior,array.lsk.init=array.lsk,
                   a.gamma=a.gamma,b.gamma=b.gamma,var.betas=var.betas)
 plot(res$llk,type='l')
+plot(res$fmodel,type='l')

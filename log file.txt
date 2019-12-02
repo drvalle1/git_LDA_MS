@@ -1,5 +1,3 @@
-with only true lambda and betas, things work well
+Things generally work but inference gets harder and harder as we increase the number of groups (e.g., with 8 groups)
 
-with only true phi: betas and nlk are so so, lambda is bad
-
-with only true lambda: things are much worse! phi is really important!
+Should I model this in two steps using "cut feedback" arguments?

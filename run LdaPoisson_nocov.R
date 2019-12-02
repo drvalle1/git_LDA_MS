@@ -2,7 +2,7 @@ rm(list=ls(all=TRUE))
 library(MCMCpack)
 library('Rcpp')
 library('RcppArmadillo')
-set.seed(12)
+set.seed(33)
 
 #get data
 setwd('U:\\GIT_models\\git_LDA_MS')
@@ -16,9 +16,7 @@ ngibbs=1000
 nburn=ngibbs/2
 
 #priors
-psi=phi.prior=0.01
-a.gamma=b.gamma=0.1
-var.betas=10
+psi=0.01
 gamma=0.1
 #----------------------------------------------------------
 #run LDA no covariates to get initial values
@@ -40,7 +38,7 @@ nlk=apply(array.lsk.init,c(1,3),sum)
 theta=nlk/apply(nlk,1,sum)
 par(mfrow=c(1,1),mar=c(3,3,1,1))
 boxplot(theta)
-ncomm=5
+ncomm=8
 
 prop=apply(theta>0.8,2,sum) #see which communities are never above 0.8
 which(prop!=0)

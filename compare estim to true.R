@@ -7,7 +7,7 @@ compare1=function(estim,true){
 }
 
 k=res$lambda[ngibbs,]
-plot(k,type='h')
+plot(k,type='h',ylim=c(0,max(k)))
 
 k=res$betas[ngibbs,]
 nparam=ncol(xmat)
