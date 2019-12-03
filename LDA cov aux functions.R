@@ -17,31 +17,38 @@ ldmultinom1=function(size,x,prob){
   lgamma(size + 1) + sum(x * log(prob) - lgamma(x + 1))
 }
 #---------------------------------------------
-sample.betas=function(nlk,xmat,betas,ncomm,nparam,jump,a.gamma,b.gamma,var.betas){
+sample.betas=function(y,xmat,betas,ncomm,nparam,jump,var.betas,phi,ntot){
   betas.orig=betas.old=betas.prop=betas
   betas.prop[]=rnorm(nparam*ncomm,mean=betas.old,sd=jump)
-  p2=a.gamma+colSums(nlk)
+  
+  var.betas1=matrix(var.betas,nparam,ncomm)
+  prior.old=dnorm(betas.orig,mean=0,sd=sqrt(var.betas1),log=T)
+  prior.new=dnorm(betas.prop,mean=0,sd=sqrt(var.betas1),log=T)
+  
   for (i in 1:nparam){
-    betas.new=betas.old
-    betas.new[i,]=betas.prop[i,]
-    
-    lmedia.old=xmat%*%betas.old
-    lmedia.new=xmat%*%betas.new
-    p1.old=colSums(nlk*lmedia.old)
-    p1.new=colSums(nlk*lmedia.new)
-    
-    media.old=exp(lmedia.old)
-    media.new=exp(lmedia.new)
-    p3.old=log(b.gamma+colSums(media.old))
-    p3.new=log(b.gamma+colSums(media.new))
-    
-    prior.old=(1/(2*var.betas))*(betas.old[i,]^2)
-    prior.new=(1/(2*var.betas))*(betas.new[i,]^2)
-    
-    pold=p1.old-p2*p3.old+prior.old
-    pnew=p1.new-p2*p3.new+prior.new
-    k=acceptMH(pold,pnew,betas.old[i,],betas.new[i,],F)
-    betas.old[i,]=k$x
+    for (j in 1:ncomm){
+      betas.new=betas.old
+      betas.new[i,j]=betas.prop[i,j]
+      
+      media.old=exp(xmat%*%betas.old)
+      media.new=exp(xmat%*%betas.new)
+      soma.media.old=rowSums(media.old)
+      soma.media.new=rowSums(media.new)
+      theta.old=media.old/soma.media.old
+      theta.new=media.new/soma.media.new
+      
+      prob.old=theta.old%*%phi
+      prob.new=theta.new%*%phi
+      p1.old=sum(y*log(prob.old))
+      p1.new=sum(y*log(prob.new))
+      p2.old=sum(dpois(ntot,soma.media.old,log=T))
+      p2.new=sum(dpois(ntot,soma.media.new,log=T))
+
+      pold=p1.old+p2.old+prior.old[i,j]
+      pnew=p1.new+p2.new+prior.new[i,j]
+      k=acceptMH(pold,pnew,betas.old[i,j],betas.new[i,j],F)
+      betas.old[i,j]=k$x
+    }
   }
   
   list(betas=betas.old,accept=betas.old!=betas.orig)

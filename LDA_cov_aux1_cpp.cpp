@@ -66,9 +66,9 @@ NumericVector LogLikMultin(int nloc,int ncomm, int nspp, NumericMatrix phi, Nume
 // [[Rcpp::export]]
 
 List SampleArray(NumericVector Arraylsk, int nloc, int nspp, int ncomm,
-                 IntegerMatrix y, NumericMatrix lp1,
+                 IntegerMatrix y, NumericMatrix lpmedia,
                  NumericVector runif1, IntegerVector nk, IntegerMatrix nks,
-                 double PriorPhi, double agamma){
+                 double PriorPhi){
   
   //convert array into arma::cube
   NumericVector vecArray=clone(Arraylsk);
@@ -94,7 +94,7 @@ List SampleArray(NumericVector Arraylsk, int nloc, int nspp, int ncomm,
               
               //calculate assignment probabilities
               for (int k1 = 0; k1 < ncomm; k1++){
-                prob[k1]=lp1(l,k1)+log(nks(k1,s)+PriorPhi)+log(agamma+nk[k1])-log(nk[k1]+nspp*PriorPhi)-log(ArrayLSK1(l,s,k1)+1);  
+                prob[k1]=lpmedia(l,k1)+log(nks(k1,s)+PriorPhi)-log(nk[k1]+nspp*PriorPhi)-log(ArrayLSK1(l,s,k1)+1);  
               }
               prob=prob-max(prob);
               prob=exp(prob);

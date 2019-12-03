@@ -1,10 +1,10 @@
 rm(list=ls(all=TRUE))
 library(MCMCpack)
-set.seed(40)
+set.seed(30)
 
-nloc=1000
+nloc=3000
 nspp=100
-ncommun=8
+ncommun=9
 
 #design matrix
 xmat=matrix(runif(nloc*ncommun,min=-3,max=3),nloc,ncommun)
@@ -13,19 +13,19 @@ xmat=matrix(runif(nloc*ncommun,min=-3,max=3),nloc,ncommun)
 tmp=matrix(-3,ncommun,ncommun)
 diag(tmp)=3
 num1=floor(nloc/ncommun)
-for (i in 1:120){
+for (i in 1:200){
   seq1=(ncommun*(i-1)+1):(ncommun*i)
   xmat[seq1,]=tmp
 }
-# image(xmat[1:(num1*ncommun),])
+image(xmat)
+xmat=cbind(1,xmat)
 
 #parameters
-lambda.true=lambda=runif(ncommun,min=4,max=7)
-betas.true=betas=diag(1,ncommun)
+b0=log(runif(ncommun,min=4,max=7))
+betas.true=betas=rbind(b0,diag(1,ncommun))
 
 #get means
-lambda1=matrix(lambda,nloc,ncommun,byrow=T)
-media.true=media=exp(log(lambda1)+xmat%*%betas); range(media)
+media.true=media=exp(xmat%*%betas); range(media)
 head(media)
 
 #generate N_lk

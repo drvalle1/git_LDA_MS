@@ -1,5 +1,5 @@
 gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
-                       a.gamma,b.gamma,var.betas){
+                       var.betas){
   #basic settings
   nparam=ncol(xmat)
   nloc=nrow(y)
@@ -10,22 +10,19 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
   array.lsk=array.lsk.init
   nlk=apply(array.lsk,c(1,3),sum)
   betas=matrix(0,nparam,ncomm)
-  lambda=rep(0,ncomm)
   options(warn=-1) #sometimes I get "glm.fit: fitted rates numerically 0 occurred" here
   for (i in 1:ncomm){
-    dat.tmp=cbind(nlk[,i],xmat)
-    colnames(dat.tmp)=c('y',paste0('cov',1:ncol(xmat)))
+    dat.tmp=cbind(nlk[,i],xmat[,-1])
+    colnames(dat.tmp)[1]='y'
     dat.tmp1=as.data.frame(dat.tmp)
     res=glm(y~.,data=dat.tmp1,family='poisson')
-    lambda[i]=exp(res$coef[1])
-    betas[,i]=res$coef[-1]
+    betas[,i]=res$coef
   }
   options(warn=2)
   nks=t(apply(array.lsk,2:3,sum))
   phi=nks/apply(nks,1,sum); apply(phi,1,sum)
 
   #to store outcomes from gibbs sampler
-  lambda.out=matrix(NA,ngibbs,ncomm)
   phi.out=matrix(NA,ngibbs,nspp*ncomm)
   nlk.out=matrix(NA,ngibbs,nloc*ncomm)
   llk.out=rep(NA,ngibbs)
@@ -45,35 +42,31 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
 
     #get log of part 1
     lpmedia=xmat%*%betas
-    pmedia=exp(lpmedia)
-    pmedia.soma=colSums(pmedia)+b.gamma
-    lp1=lpmedia-matrix(log(pmedia.soma),nloc,ncomm,byrow=T)
-    
+
     #get summaries of array.lsk
     nk=colSums(nlk)
-    
+
     #sample z
     tmp = SampleArray(Arraylsk=array.lsk, nloc=nloc,nspp=nspp,ncomm=ncomm,
-                      y=y,lp1=lp1,runif1=runif(sum(y)),
-                      nk=nk,nks=nks, PriorPhi=phi.prior, agamma=a.gamma)
+                      y=y,lpmedia=lpmedia,runif1=runif(sum(y)),
+                      nk=nk,nks=nks, PriorPhi=phi.prior)
     array.lsk=tmp$ArrayLSK
+    # array.lsk=array.lsk.true
     nlk=apply(array.lsk,c(1,3),sum)
     nks=t(apply(array.lsk,2:3,sum))
 
     #sample betas
-    tmp=sample.betas(nlk=nlk,xmat=xmat,betas=betas,
+    tmp=sample.betas(y=y,xmat=xmat,betas=betas,
                      ncomm=ncomm,nparam=nparam,jump=jump1$betas,
-                     a.gamma=a.gamma,b.gamma=b.gamma,var.betas=var.betas)
+                     var.betas=var.betas,phi=phi,ntot=ntot)
     betas=tmp$betas
     accept1$betas=accept1$betas+tmp$accept
+    # betas=rbind(lambda.true,betas.true)
     
     #sample phi
     phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
-
-    #sample lambda
-    lambda=get.lambda(nlk=nlk,a.gamma=a.gamma,b.gamma=b.gamma,
-                      xmat=xmat,betas=betas,ncomm=ncomm)
-
+    # phi=phi.true
+    
     #adaptive MH
     if (i%%accept.output==0 & i<nadapt){
       k=print.adapt(accept1z=accept1,jump1z=jump1,accept.output=accept.output)
@@ -82,7 +75,7 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     }
     
     #calculate Poisson probabilities
-    media=matrix(lambda,nloc,ncomm,byrow=T)*exp(xmat%*%betas)
+    media=exp(xmat%*%betas)
     p1=dpois(ntot,apply(media,1,sum),log=T)
     
     #calculate loglik
@@ -96,21 +89,18 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     # log(ddirichlet(phi[2,],rep(phi.prior,nspp)))
     
     #get betas prior
-    p4=dnorm(betas,mean=0,sd=sqrt(var.betas),log=T)
-    
-    #get lambda prior
-    p5=dgamma(lambda,a.gamma,b.gamma,log=T)
+    var.betas1=matrix(var.betas,nparam,ncomm)
+    p4=dnorm(betas,mean=0,sd=sqrt(var.betas1),log=T)
     
     #store results  
     llk.out[i]=sum(p1)+sum(p2)
-    fmodel.out[i]=sum(p1)+sum(p2)+sum(p3)+sum(p4)+sum(p5)
+    fmodel.out[i]=sum(p1)+sum(p2)+sum(p3)+sum(p4)
     phi.out[i,]=phi
-    lambda.out[i,]=lambda
     nlk.out[i,]=nlk
     betas.out[i,]=betas
   }
   
-  list(llk=llk.out,phi=phi.out,lambda=lambda.out,nlk=nlk.out,betas=betas.out,fmodel=fmodel.out)  
+  list(llk=llk.out,phi=phi.out,nlk=nlk.out,betas=betas.out,fmodel=fmodel.out)  
 }
 
 

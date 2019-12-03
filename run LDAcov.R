@@ -14,8 +14,8 @@ nspp=ncol(y)
 
 #get array.lsk
 tmp=read.csv('array lsk.csv',as.is=T)
-ncomm=8 #this was estimated based on a previous step
-array.lsk=array(tmp$V1,dim=c(nloc,nspp,ncomm))
+ncomm=9 #this was estimated based on a previous step
+array.lsk.init=array(tmp$V1,dim=c(nloc,nspp,ncomm))
 
 #basic settings
 ngibbs=1000
@@ -23,8 +23,7 @@ nburn=ngibbs/2
 
 #priors
 phi.prior=0.01
-a.gamma=b.gamma=0.1
-var.betas=10
+var.betas=c(10,rep(1,ncol(xmat)-1))
 gamma=0.1
 
 #----------------------------------------------------------
@@ -37,7 +36,7 @@ source('LDA cov aux functions.R')
 sourceCpp('LDA_cov_aux1_cpp.cpp')
 
 res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,nburn=nburn,y=y,xmat=xmat,
-                  phi.prior=phi.prior,array.lsk.init=array.lsk,
-                  a.gamma=a.gamma,b.gamma=b.gamma,var.betas=var.betas)
+                  phi.prior=phi.prior,array.lsk.init=array.lsk.init,
+                  var.betas=var.betas)
 plot(res$llk,type='l')
 plot(res$fmodel,type='l')
