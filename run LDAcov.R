@@ -14,7 +14,7 @@ nspp=ncol(y)
 
 #get array.lsk
 tmp=read.csv('array lsk.csv',as.is=T)
-ncomm=9 #this was estimated based on a previous step
+ncomm=length(tmp$V1)/(nspp*nloc); ncomm
 array.lsk.init=array(tmp$V1,dim=c(nloc,nspp,ncomm))
 
 #basic settings

@@ -4,7 +4,7 @@ set.seed(30)
 
 nloc=3000
 nspp=100
-ncommun=9
+ncommun=4
 
 #design matrix
 xmat=matrix(runif(nloc*ncommun,min=-3,max=3),nloc,ncommun)

@@ -25,33 +25,13 @@ sample.betas=function(y,xmat,betas,ncomm,nparam,jump,var.betas,phi,ntot){
   prior.old=dnorm(betas.orig,mean=0,sd=sqrt(var.betas1),log=T)
   prior.new=dnorm(betas.prop,mean=0,sd=sqrt(var.betas1),log=T)
   
-  for (i in 1:nparam){
-    for (j in 1:ncomm){
-      betas.new=betas.old
-      betas.new[i,j]=betas.prop[i,j]
-      
-      media.old=exp(xmat%*%betas.old)
-      media.new=exp(xmat%*%betas.new)
-      soma.media.old=rowSums(media.old)
-      soma.media.new=rowSums(media.new)
-      theta.old=media.old/soma.media.old
-      theta.new=media.new/soma.media.new
-      
-      prob.old=theta.old%*%phi
-      prob.new=theta.new%*%phi
-      p1.old=sum(y*log(prob.old))
-      p1.new=sum(y*log(prob.new))
-      p2.old=sum(dpois(ntot,soma.media.old,log=T))
-      p2.new=sum(dpois(ntot,soma.media.new,log=T))
-
-      pold=p1.old+p2.old+prior.old[i,j]
-      pnew=p1.new+p2.new+prior.new[i,j]
-      k=acceptMH(pold,pnew,betas.old[i,j],betas.new[i,j],F)
-      betas.old[i,j]=k$x
-    }
-  }
+  runif1=matrix(runif(nparam*ncomm),nparam,ncomm)
+  betas=sampleBetas(y=y,xmat=xmat,betas_prop=betas.prop,
+                    prior_old=prior.old, prior_new=prior.new, runif1=runif1,
+                    betas=betas, phi=phi,ntot=ntot,
+                    ncomm=ncomm,nparam=nparam, nloc=nloc, nspp=nspp)
   
-  list(betas=betas.old,accept=betas.old!=betas.orig)
+  list(betas=betas,accept=betas!=betas.orig)
 }
 
 #---------------------------------

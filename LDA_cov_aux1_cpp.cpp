@@ -119,3 +119,70 @@ List SampleArray(NumericVector Arraylsk, int nloc, int nspp, int ncomm,
   
   return(L);
 }
+
+//this function samples betas
+// [[Rcpp::export]]
+arma::mat sampleBetas(arma::mat y,arma::mat xmat, arma::mat betas_prop,
+                      arma::mat prior_old, arma::mat prior_new, arma::mat runif1,
+                      arma::mat betas, arma::mat phi,arma::vec ntot,
+                      int ncomm,int nparam, int nloc, int nspp) {
+  
+  arma::mat betas_old=betas;
+  arma::mat betas_new(nparam,ncomm);
+  arma::mat media_old=exp(xmat*betas_old);
+  arma::mat media_new(nloc,ncomm);
+  arma::vec soma_media_old(nloc);
+  arma::vec soma_media_new(nloc);
+  arma::mat theta_old(nloc,ncomm);
+  arma::mat theta_new(nloc,ncomm);
+  arma::mat prob_old(nloc,nspp);
+  arma::mat prob_new(nloc,nspp);
+  double p1_old;
+  double p1_new;
+  double p2_old;
+  double p2_new;
+  double pold; 
+  double pnew;
+  double pthresh;
+  for(int i=0;i<nparam;i++){
+    for(int j=0;j<ncomm;j++){
+      betas_new=betas_old;
+      media_new=media_old;
+      betas_new(i,j)=betas_prop(i,j);
+      media_new.col(j)=exp(xmat*betas_new.col(j));
+      soma_media_old=sum(media_old,1);
+      soma_media_new=sum(media_new,1);
+      
+      //normalize vectors
+      for(int k=0;k<ncomm;k++){
+        theta_old.col(k)=media_old.col(k)/soma_media_old;
+        theta_new.col(k)=media_new.col(k)/soma_media_new;
+      }
+      
+      //get multinomial probabilities
+      prob_old=theta_old*phi;
+      prob_new=theta_new*phi;
+      p1_old=accu(y%log(prob_old));
+      p1_new=accu(y%log(prob_new));
+      
+      //get Poisson probabilities
+      p2_old=0;
+      p2_new=0;
+      for(int l=0;l<nloc;l++){ 
+        p2_old += ntot(l)*log(soma_media_old(l))-soma_media_old(l);
+        p2_new += ntot(l)*log(soma_media_new(l))-soma_media_new(l);
+      }
+      pold=p1_old+p2_old+prior_old(i,j);
+      pnew=p1_new+p2_new+prior_new(i,j);
+      
+      //MH step
+      pthresh=exp(pnew-pold);
+      if (runif1(i,j)< pthresh){
+        betas_old(i,j)=betas_new(i,j);
+        media_old.col(j)=media_new.col(j);
+      }
+    }
+  }
+  
+  return betas_old;
+}
