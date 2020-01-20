@@ -128,22 +128,12 @@ arma::mat sampleBetas(arma::mat y,arma::mat xmat, arma::mat betas_prop,
                       int ncomm,int nparam, int nloc, int nspp) {
   
   arma::mat betas_old=betas;
-  arma::mat betas_new(nparam,ncomm);
   arma::mat media_old=exp(xmat*betas_old);
-  arma::mat media_new(nloc,ncomm);
-  arma::vec soma_media_old(nloc);
-  arma::vec soma_media_new(nloc);
-  arma::mat theta_old(nloc,ncomm);
-  arma::mat theta_new(nloc,ncomm);
-  arma::mat prob_old(nloc,nspp);
-  arma::mat prob_new(nloc,nspp);
-  double p1_old;
-  double p1_new;
-  double p2_old;
-  double p2_new;
-  double pold; 
-  double pnew;
-  double pthresh;
+  arma::mat betas_new(nparam,ncomm), media_new(nloc,ncomm), theta_old(nloc,ncomm), 
+            theta_new(nloc,ncomm), prob_old(nloc,nspp), prob_new(nloc,nspp);
+  arma::vec soma_media_old(nloc), soma_media_new(nloc);
+  double p1_old, p1_new, p2_old, p2_new, pold, pnew, pthresh;
+  
   for(int i=0;i<nparam;i++){
     for(int j=0;j<ncomm;j++){
       betas_new=betas_old;
