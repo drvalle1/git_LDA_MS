@@ -1,7 +1,6 @@
 rm(list=ls(all=TRUE))
 library(MCMCpack)
 library('Rcpp')
-library('RcppArmadillo')
 set.seed(10)
 
 #get data
@@ -34,6 +33,7 @@ setwd('U:\\GIT_models\\git_LDA_MS')
 source('LDA cov main function.R')
 source('LDA cov aux functions.R')
 sourceCpp('LDA_cov_aux1_cpp.cpp')
+sourceCpp('slice_aux1_cpp.cpp')
 
 res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,nburn=nburn,y=y,xmat=xmat,
                   phi.prior=phi.prior,array.lsk.init=array.lsk.init,

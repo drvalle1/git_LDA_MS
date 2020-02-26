@@ -29,11 +29,8 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
   fmodel.out=matrix(NA,ngibbs,1)
   betas.out=matrix(NA,ngibbs,nparam*ncomm)
   
-  #useful stuff for MH algorithm
-  accept1=list(betas=matrix(0,nparam,ncomm))
-  jump1=list(betas=matrix(0.1,nparam,ncomm))
-  accept.output=50
-  nadapt=ngibbs/2
+  #useful stuff for slice sampler algorithm
+  w=0.1
   
   #run gibbs sampler
   options(warn=2)
@@ -56,23 +53,11 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     nks=t(apply(array.lsk,2:3,sum))
 
     #sample betas
-    tmp=sample.betas(y=y,xmat=xmat,betas=betas,
-                     ncomm=ncomm,nparam=nparam,jump=jump1$betas,
-                     var.betas=var.betas,phi=phi,ntot=ntot)
-    betas=tmp$betas
-    accept1$betas=accept1$betas+tmp$accept
-    # betas=rbind(lambda.true,betas.true)
-    
+    betas=SampleBetas(param=betas,y=nlk,xmat=xmat,w=w,nparam=nparam,ncomm=ncomm,var1=var.betas)
+
     #sample phi
     phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
     # phi=phi.true
-    
-    #adaptive MH
-    if (i%%accept.output==0 & i<nadapt){
-      k=print.adapt(accept1z=accept1,jump1z=jump1,accept.output=accept.output)
-      accept1=k$accept1
-      jump1=k$jump1
-    }
     
     #calculate Poisson probabilities
     media=exp(xmat%*%betas)

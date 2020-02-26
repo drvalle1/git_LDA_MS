@@ -1,10 +1,10 @@
 rm(list=ls(all=TRUE))
 library(MCMCpack)
-set.seed(30)
+set.seed(38)
 
 nloc=3000
 nspp=100
-ncommun=4
+ncommun=5
 
 #design matrix
 xmat=matrix(runif(nloc*ncommun,min=-3,max=3),nloc,ncommun)

@@ -1,4 +1,12 @@
+library(MCMCpack)
+library('coda')
+
 plot(res$llk[1:ngibbs],type='l')
+nburn=400
+plot(res$llk[nburn:ngibbs],type='l')
+#calculate effective sample size
+effectiveSize(mcmc(res$betas[nburn:ngibbs,]))
+plot(res$betas[nburn:ngibbs,1],type='l')
 
 compare1=function(estim,true){
   rango=range(c(true,estim))
@@ -18,6 +26,7 @@ round(k1[,ordem],2)
 image(k1[,ordem])
 
 #look at nlk
+par(mfrow=c(2,2))
 tmp=matrix(res$nlk[ngibbs,],nloc,ncomm); 
 boxplot(tmp)
 compare1(estim=jitter(tmp[,ordem]),true=jitter(nlk.true))
