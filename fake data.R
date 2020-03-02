@@ -1,17 +1,17 @@
 rm(list=ls(all=TRUE))
 library(MCMCpack)
-set.seed(38)
+set.seed(28)
 
 nloc=3000
 nspp=100
-ncommun=5
+ncommun=4
 
 #design matrix
-xmat=matrix(runif(nloc*ncommun,min=-3,max=3),nloc,ncommun)
+xmat=matrix(runif(nloc*ncommun,min=-1,max=3),nloc,ncommun)
 
 #pure sites
 tmp=matrix(-3,ncommun,ncommun)
-diag(tmp)=3
+diag(tmp)=1
 num1=floor(nloc/ncommun)
 for (i in 1:200){
   seq1=(ncommun*(i-1)+1):(ncommun*i)
@@ -21,7 +21,7 @@ image(xmat)
 xmat=cbind(1,xmat)
 
 #parameters
-b0=log(runif(ncommun,min=4,max=7))
+b0=log(runif(ncommun,min=5,max=8))
 betas.true=betas=rbind(b0,diag(1,ncommun))
 
 #get means
@@ -35,7 +35,9 @@ for (i in 1:ncommun){
   nlk[,i]=rpois(nloc,media[,i])
 }
 nlk.true=nlk; boxplot(nlk)
-z=nlk/apply(nlk,1,sum); apply(z,1,sum); boxplot(z); apply(z,2,range); apply(z>0.9,2,mean)
+soma=apply(nlk,1,sum); sum(soma==0)
+z=nlk/soma; apply(z,1,sum); 
+boxplot(z); apply(z,2,range); apply(z>0.9,2,mean)
 nl=apply(nlk,1,sum)
 hist(nl)
 sum(nl)
@@ -43,30 +45,15 @@ sum(nl)
 plot(media,nlk)
 
 #generate phi (assuming that each species is strongly present in a single group) 
-phi=matrix(0.01,ncommun,nspp)
-num=floor(nspp/ncommun)
-for (i in 1:nspp){
-  n=rbinom(1,size=1,prob=0.1)+1
-  ind=sample(1:ncommun,size=n)
-  phi[ind,i]=1
+tmp=rdirichlet(ncommun,rep(0.01,nspp))
+apply(tmp,1,sum)
+
+for (i in 1:nspp){ #add some zeroes
+  ind=sample(1:ncommun,size=1)
+  tmp[ind,i]=runif(1,min=0.1,max=1)
 }
-phi.true=phi=phi/matrix(apply(phi,1,sum),ncommun,nspp)
-apply(phi,1,sum)
-
-image(phi[,1:20])
-
-#per species
-par(mfrow=c(4,2),mar=rep(1,4))
-for (i in 1:(ncommun*2)) plot(phi[,i]/sum(phi[,i]),type='h',ylim=c(0,1))
-
-par(mfrow=c(4,2),mar=rep(1,4))
-for (i in 1:ncommun) plot(phi[i,],type='h')
-
-# for (i in 1:nspp){ #add some zeroes
-#   ind=sample(1:ncommun,size=1)
-#   tmp[ind,i]=runif(1,min=0.5,max=1)
-# }
-# phi=tmp/matrix(rowSums(tmp),ncommun,nspp) #re-scale to make sure it sums to 1
+phi=tmp/matrix(rowSums(tmp),ncommun,nspp) #re-scale to make sure it sums to 1
+phi.true=phi
 # round(phi[,1:20],2)
 # table(round(phi,2))
 

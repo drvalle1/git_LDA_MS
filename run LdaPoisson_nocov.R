@@ -38,9 +38,9 @@ nlk=apply(array.lsk.init,c(1,3),sum)
 theta=nlk/apply(nlk,1,sum)
 par(mfrow=c(1,1),mar=c(3,3,1,1))
 boxplot(theta)
-ncomm=5
+ncomm=4
 
-prop=apply(theta>0.8,2,sum,na.rm=T) #see which communities are never above 0.8
+prop=apply(theta>0.9,2,sum,na.rm=T) #see which communities are never above 0.8
 which(prop!=0)
 cond=prop!=0
 ncomm=sum(cond)
