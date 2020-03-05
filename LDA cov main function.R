@@ -66,14 +66,16 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     media=exp(xmat%*%betas) #get mean
     NBN=SampleNBN(Media=media,y=nlk,NBN=NBN,w=w.NBN,MaxIter=MaxIter)
     
-    #calculate approximate loglikel
-    theta=nlk/rowSums(nlk)
+    #calculate approximate loglikel (assumes Poisson distribution)
+    soma=rowSums(media)
+    theta=media/soma
     probs=theta%*%phi
     tmp=y*log(probs)
     p1=sum(tmp)
-
+    p2=sum(dpois(ntot,soma,log=T))
+    
     #store results  
-    llk.out[i]=p1
+    llk.out[i]=p1+p2
     phi.out[i,]=phi
     nlk.out[i,]=nlk
     betas.out[i,]=betas
