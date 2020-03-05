@@ -12,8 +12,3 @@ ldirichlet=function(x,alpha){
   invBeta1=lgamma(alpha*n)-n*lgamma(alpha)
   invBeta1+tmp
 }
-#---------------------------------------------
-ldmultinom1=function(size,x,prob){
-  lgamma(size + 1) + sum(x * log(prob) - lgamma(x + 1))
-}
-
