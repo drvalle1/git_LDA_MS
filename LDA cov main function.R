@@ -66,23 +66,38 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     media=exp(xmat%*%betas) #get mean
     NBN=SampleNBN(Media=media,y=nlk,NBN=NBN,w=w.NBN,MaxIter=MaxIter)
     
-    #calculate approximate loglikel (assumes Poisson distribution)
-    soma=rowSums(media)
-    theta=media/soma
-    probs=theta%*%phi
-    tmp=y*log(probs)
-    p1=sum(tmp)
-    p2=sum(dpois(ntot,soma,log=T))
+    #calculate NB probabilities
+    p1=sum(dnbinom(nlk,mu=media,size=NBN,log=T))
+    
+    #calculate Multinom probabilities
+    # tmp=0
+    # for (l in 1:nloc){
+    #   for (k in 1:ncomm){
+    #     tmp=tmp+dmultinom(array.lsk[l,,k],size=sum(array.lsk[l,,k]),prob=phi[k,],log=T)
+    #   }
+    # }
+    phi.tmp=phi; phi.tmp[phi.tmp<0.00000000001]=0.00000000001
+    tmp=LogLikMultin(nloc=nloc,ncomm=ncomm,nspp=nspp,LogPhi=log(phi.tmp), Arraylsk=array.lsk)
+    p2=sum(tmp)
+
+    #get phi prior
+    p3=ldirichlet(x=phi.tmp,alpha=phi.prior)
+    # log(ddirichlet(phi.tmp[2,],rep(phi.prior,nspp)))
+    
+    #get betas prior
+    var.betas1=matrix(var.betas,nparam,ncomm)
+    p4=dnorm(betas,mean=0,sd=sqrt(var.betas1),log=T)
     
     #store results  
-    llk.out[i]=p1+p2
+    llk.out[i]=sum(p1)+sum(p2)
+    fmodel.out[i]=sum(p1)+sum(p2)+sum(p3)+sum(p4)
     phi.out[i,]=phi
     nlk.out[i,]=nlk
     betas.out[i,]=betas
     NBN.out[i]=NBN
   }
   
-  list(llk=llk.out,phi=phi.out,nlk=nlk.out,betas=betas.out,NBN=NBN.out)  
+  list(llk=llk.out,phi=phi.out,nlk=nlk.out,betas=betas.out,fmodel=fmodel.out,NBN=NBN.out)  
 }
 
 

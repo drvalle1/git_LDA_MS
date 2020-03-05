@@ -22,7 +22,7 @@ nburn=ngibbs/2
 
 #priors
 phi.prior=0.01
-var.betas=c(10,rep(1,ncol(xmat)-1))
+var.betas=c(10,rep(10,ncol(xmat)-1))
 gamma=0.1
 
 #----------------------------------------------------------

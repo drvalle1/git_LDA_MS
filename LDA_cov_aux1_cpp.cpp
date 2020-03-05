@@ -43,13 +43,14 @@ NumericVector LogLikMultin(int nloc,int ncomm, int nspp, NumericMatrix LogPhi,
   NumericVector vecArray(Arraylsk);
   arma::cube ArrayLSK1(vecArray.begin(), nloc, nspp, ncomm, false);
   NumericVector tmp(nspp);
-  
+  double soma;
   for (int l = 0; l < nloc; l++) {
     for (int k = 0; k < ncomm; k++){
       for (int s = 0; s < nspp; s++){
         tmp[s]=ArrayLSK1(l,s,k);
       }
-      p2[l]=p2[l]+ldmultinom(tmp,sum(tmp),LogPhi(k,_));
+      soma=sum(tmp);
+      if (soma>0) p2[l]=p2[l]+ldmultinom(tmp,soma,LogPhi(k,_));
     }
   }
   return(p2);
