@@ -13,6 +13,7 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
   options(warn=-1) #sometimes I get "glm.fit: fitted rates numerically 0 occurred" here
   for (i in 1:ncomm){
     dat.tmp=cbind(nlk[,i],xmat[,-1])
+    colnames(dat.tmp)=rep('',ncol(dat.tmp)) #this is important otherwise next line breaks when we only have a single covariate
     colnames(dat.tmp)[1]='y'
     dat.tmp1=as.data.frame(dat.tmp)
     res=glm(y~.,data=dat.tmp1,family='poisson')

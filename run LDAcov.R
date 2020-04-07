@@ -7,6 +7,7 @@ set.seed(10)
 setwd('U:\\GIT_models\\git_LDA_MS')
 dat=read.csv('fake data.csv',as.is=T)
 xmat=data.matrix(read.csv('fake data xmat.csv',as.is=T))
+# xmat=xmat[,1:2]
 y=data.matrix(dat)
 nloc=nrow(y)
 nspp=ncol(y)

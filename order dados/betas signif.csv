@@ -1,0 +1,5 @@
+"","gr1","gr2","gr3"
+"intercept",TRUE,TRUE,TRUE
+"greater6days",TRUE,FALSE,TRUE
+"saturday",TRUE,TRUE,FALSE
+"tueswed",FALSE,FALSE,FALSE
