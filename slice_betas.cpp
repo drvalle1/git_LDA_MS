@@ -17,6 +17,7 @@ double LogTargetBetas(NumericVector LogMediaMiss, NumericVector param, NumericVe
   NumericVector LogMediaComp=LogMediaMiss+xmat(_,target)*param[target];
   NumericVector media=exp(LogMediaComp);
   NumericVector NBP=NBN/(media+NBN);
+
   NumericVector LogPrior=(-1/(2*var1))*(param*param); //assumes mean zero
   double res=sum(lgamma(y+NBN)+NBN*log(NBP)+y*log(1-NBP))+sum(LogPrior);
   return res;
@@ -56,7 +57,7 @@ NumericVector DoublingBetas(NumericVector LogMediaMiss, double yslice, double w,
 // [[Rcpp::export]]
 double SampleEachParamBetas(NumericVector LogMediaMiss,NumericVector rango1,double yslice,NumericVector param,
                             NumericVector y,NumericMatrix xmat,int target,NumericVector var1,
-                            double NBN,int MaxIter) {
+                            double NBN,int MaxIter, double LoThresh) {
   double yfim=R_NegInf;
   double x=0;
   double DistLo;
@@ -64,7 +65,7 @@ double SampleEachParamBetas(NumericVector LogMediaMiss,NumericVector rango1,doub
   double diff1=rango1[1]-rango1[0];
   double LgammaNBN=lgamma(NBN);
   int oo=0;
-  while ((yfim<yslice) & (diff1 > 0.00001) & (oo<MaxIter)){
+  while ((yfim<yslice) & (diff1 > LoThresh) & (oo<MaxIter)){
     x=rango1[0]+diff1*runif(1)[0]; //sample uniformly within this range
     param[target]=x;
     yfim=LogTargetBetas(LogMediaMiss,param,y,xmat,target,var1,NBN,LgammaNBN);
@@ -93,7 +94,8 @@ NumericVector MatrixMultip(NumericMatrix xmat, NumericVector param, int nparam) 
 //this function samples all parameters for all communities, using a slice sampler for each parameter
 // [[Rcpp::export]]
 NumericMatrix SampleBetas(NumericMatrix param, NumericMatrix y, NumericMatrix xmat, 
-                          double w,int nparam,int ncomm, NumericVector var1,double NBN, int MaxIter) {
+                          double w,int nparam,int ncomm, NumericVector var1,double NBN, int MaxIter,
+                          double LoThresh) {
   NumericVector LogMediaMiss(xmat.nrow());
   NumericVector LogMedia(xmat.nrow());
   double upper1;
@@ -115,7 +117,8 @@ NumericMatrix SampleBetas(NumericMatrix param, NumericMatrix y, NumericMatrix xm
       rango1=DoublingBetas(LogMediaMiss,yslice,w,param(_,i),y(_,i),xmat,j,var1,NBN,LgammaNBN,MaxIter); //find range by doubling window
       
       //sample this particular parameter
-      param(j,i)=SampleEachParamBetas(LogMediaMiss,rango1,yslice,param(_,i),y(_,i),xmat,j,var1,NBN,MaxIter); //sample within the defined range (rango1)
+      param(j,i)=SampleEachParamBetas(LogMediaMiss,rango1,yslice,param(_,i),y(_,i),xmat,j,var1,NBN,MaxIter,
+                 LoThresh); //sample within the defined range (rango1)
       
       //re-calculate logmean
       LogMedia=LogMediaMiss+xmat(_,j)*param(j,i);

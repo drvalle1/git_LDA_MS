@@ -23,7 +23,7 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
   nks=t(apply(array.lsk,2:3,sum))
   nk=rowSums(nks)
   phi=nks/apply(nks,1,sum); apply(phi,1,sum)
-  NBN=100
+  NBN=1
   
   #to store outcomes from gibbs sampler
   phi.out=matrix(NA,ngibbs,nspp*ncomm)
@@ -34,9 +34,13 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
   NBN.out=matrix(NA,ngibbs,1)
   
   #useful stuff for slice sampler algorithm
-  w.betas=0.1
-  w.NBN=10
-  MaxIter=100
+  w.betas=1
+  w.NBN=1
+  MaxIter=100 #to avoid overly long slice samplers
+  
+  #to avoid numerical issues when calculating log(p) or log(1-p)
+  LoThresh=0.00000001
+  UpThresh=1-LoThresh
   
   #run gibbs sampler
   options(warn=2)
@@ -46,6 +50,7 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     #sample z
     media=exp(xmat%*%betas) #get mean
     NBP=NBN/(media+NBN)     #get NBP
+    NBP[NBP>UpThresh]=UpThresh
     tmp = SampleArray(Arraylsk=array.lsk, nloc=nloc,nspp=nspp,ncomm=ncomm,NBN=NBN,
                       y=y,LogPhi=log(phi),LogOneMinusP=log(1-NBP),
                       runif1=runif(sum(y)),nlk=nlk)
@@ -57,7 +62,8 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     
     #sample betas
     betas=SampleBetas(param=betas,y=nlk,xmat=xmat,w=w.betas,nparam=nparam,
-                      ncomm=ncomm,var1=var.betas,NBN=NBN,MaxIter=MaxIter)
+                      ncomm=ncomm,var1=var.betas,NBN=NBN,MaxIter=MaxIter,
+                      LoThresh=LoThresh)
 
     #sample phi
     phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
@@ -65,19 +71,16 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     
     #sample NBN
     media=exp(xmat%*%betas) #get mean
-    NBN=SampleNBN(Media=media,y=nlk,NBN=NBN,w=w.NBN,MaxIter=MaxIter)
+    NBN=SampleNBN(Media=media,y=nlk,NBN=NBN,w=w.NBN,MaxIter=MaxIter,LoThresh=LoThresh)
     
     #calculate NB probabilities
-    p1=sum(dnbinom(nlk,mu=media,size=NBN,log=T))
+    media.tmp=media
+    media.tmp[media.tmp<LoThresh]=LoThresh
+    p1=sum(dnbinom(nlk,mu=media.tmp,size=NBN,log=T))
     
     #calculate Multinom probabilities
-    # tmp=0
-    # for (l in 1:nloc){
-    #   for (k in 1:ncomm){
-    #     tmp=tmp+dmultinom(array.lsk[l,,k],size=sum(array.lsk[l,,k]),prob=phi[k,],log=T)
-    #   }
-    # }
-    phi.tmp=phi; phi.tmp[phi.tmp<0.00000000001]=0.00000000001
+    phi.tmp=phi
+    phi.tmp[phi.tmp<LoThresh]=LoThresh
     tmp=LogLikMultin(nloc=nloc,ncomm=ncomm,nspp=nspp,LogPhi=log(phi.tmp), Arraylsk=array.lsk)
     p2=sum(tmp)
 
@@ -97,7 +100,7 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     betas.out[i,]=betas
     NBN.out[i]=NBN
   }
-  
+
   list(llk=llk.out,phi=phi.out,nlk=nlk.out,betas=betas.out,fmodel=fmodel.out,NBN=NBN.out)  
 }
 

@@ -26,11 +26,12 @@ double LogTargetNBN(NumericMatrix Media, NumericMatrix y, double NBN) {
 
 //this function doubles the interval until we are outside the slice
 // [[Rcpp::export]]
-NumericVector DoublingNBN(double yslice, double w, NumericMatrix y, double NBN,NumericMatrix Media,int MaxIter){
+NumericVector DoublingNBN(double yslice, double w, NumericMatrix y, double NBN,NumericMatrix Media,int MaxIter,
+                          double LoThresh){
   double ParamLo=NBN;
   double ParamHi=NBN;
   ParamLo=ParamLo-w*runif(1)[0];
-  if (ParamLo<0) ParamLo=0;
+  if (ParamLo<LoThresh) ParamLo=LoThresh;
   ParamHi=ParamLo+w;
   double ylo=LogTargetNBN(Media,y,ParamLo);
   double yhi=LogTargetNBN(Media,y,ParamHi);
@@ -38,7 +39,7 @@ NumericVector DoublingNBN(double yslice, double w, NumericMatrix y, double NBN,N
   int oo=0;
   while((ylo>yslice) & (ParamLo>0) & (oo<MaxIter)){
     ParamLo=ParamLo-w;
-    if (ParamLo<0) ParamLo=0;
+    if (ParamLo<LoThresh) ParamLo=LoThresh;
     ylo=LogTargetNBN(Media,y,ParamLo);
     oo=oo+1;
   }
@@ -56,14 +57,15 @@ NumericVector DoublingNBN(double yslice, double w, NumericMatrix y, double NBN,N
 
 //this function shrinks the slice if samples are outside the slice. If sample is inside the slice, accept this sample
 // [[Rcpp::export]]
-double ShrinkAndSample(NumericMatrix Media,NumericVector rango1,double yslice,NumericMatrix y,double NBN, int MaxIter) {
+double ShrinkAndSample(NumericMatrix Media,NumericVector rango1,double yslice,NumericMatrix y,double NBN, int MaxIter,
+                       double LoThresh) {
   double yfim=R_NegInf;
-  double x=0;
+  double x=NBN;
   double DistLo;
   double DistHi;
   double diff1=rango1[1]-rango1[0];
   int oo=0;
-  while ((yfim<yslice) & (diff1 > 0.00001) & (oo<MaxIter)){
+  while ((yfim<yslice) & (diff1 > LoThresh) & (oo<MaxIter)){
     x=rango1[0]+diff1*runif(1)[0]; //sample uniformly within this range
     yfim=LogTargetNBN(Media,y,x);
     if (yfim<yslice){ //shrink the slice if x falls outside
@@ -80,7 +82,7 @@ double ShrinkAndSample(NumericMatrix Media,NumericVector rango1,double yslice,Nu
 
 //this function samples NBN using a slice sampler 
 // [[Rcpp::export]]
-double SampleNBN(NumericMatrix Media,NumericMatrix y,double NBN, double w, int MaxIter) {
+double SampleNBN(NumericMatrix Media,NumericMatrix y,double NBN, double w, int MaxIter, double LoThresh) {
   double upper1;
   double yslice;
   NumericVector rango1(2);
@@ -90,10 +92,10 @@ double SampleNBN(NumericMatrix Media,NumericMatrix y,double NBN, double w, int M
   yslice=upper1-rexp(1)[0]; //method suggest by Neal 2003 to sample uniformly vertically
       
   //define slice  
-  rango1=DoublingNBN(yslice, w, y, NBN, Media, MaxIter); //find range by doubling window
+  rango1=DoublingNBN(yslice, w, y, NBN, Media, MaxIter,LoThresh); //find range by doubling window
   
   //sample this particular parameter
-  NBN=ShrinkAndSample(Media,rango1,yslice,y,NBN, MaxIter) ; //sample within the defined range (rango1)
+  NBN=ShrinkAndSample(Media,rango1,yslice,y,NBN, MaxIter,LoThresh) ; //sample within the defined range (rango1)
       
   return NBN;
 }
