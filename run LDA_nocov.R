@@ -7,7 +7,6 @@ set.seed(33)
 #get data
 setwd('U:\\GIT_models\\git_LDA_MS')
 dat=read.csv('fake data.csv',as.is=T)
-xmat=data.matrix(read.csv('fake data xmat.csv',as.is=T))
 y=data.matrix(dat)
 
 #basic settings
@@ -32,54 +31,49 @@ res=LDA.abundance(y=y,ncomm=ncomm.init,ngibbs=ngibbs,nburn=nburn,psi=psi,gamma=g
 nloc=nrow(y)
 nspp=ncol(y)
 array.lsk.init=res$array.lsk
+phi1=matrix(res$phi[nrow(res$phi),],ncomm.init,ncol(y))
 
 #look at convergence
 plot(res$llk,type='l')
+seq.conv=350:length(res$llk)
+plot(res$llk[seq.conv],type='l')
 
 #determine optimal number of groups
 nlk=apply(array.lsk.init,c(1,3),sum)
-theta=nlk/apply(nlk,1,sum)
+theta1=nlk/apply(nlk,1,sum)
 par(mfrow=c(1,1),mar=c(3,3,1,1))
-boxplot(theta)
-ncomm=3
-
-prop=apply(theta>0.99,2,sum,na.rm=T) #see which communities are never above 0.8
-which(prop!=0)
-cond=prop!=0
-ncomm=sum(cond)
+boxplot(theta1)
+ncomm=4
+seq1=1:ncomm
+sum(nlk[,seq1]/sum(nlk))
 
 #re-distribute individuals within array.lsk.init that are in eliminated communities
-array.lsk=array.lsk.init[,,cond]
+array.lsk=array.lsk.init[,,seq1]
 for (i in 1:nloc){
   for (j in 1:nspp){
-    tmp=array.lsk.init[i,j,!cond]
+    tmp=array.lsk.init[i,j,-seq1]
     n=sum(tmp)
     if (n>0){
-      z=rmultinom(1,size=n,prob=rep(1/ncomm,ncomm))
+      prob=theta1[i,seq1]*phi1[seq1,j]
+      prob=prob/sum(prob)
+      z=rmultinom(1,size=n,prob=prob)
       array.lsk[i,j,]=array.lsk[i,j,]+z
     }
   }
 }
 
-#export results
-dat1=matrix(array.lsk,nloc*nspp*ncomm,1)
+#export array.lsk
 setwd('U:\\GIT_models\\git_LDA_MS')
+dat1=matrix(array.lsk,nloc*nspp*ncomm,1)
 write.csv(dat1,'array lsk.csv',row.names=F)
 
-#output posterior for phi
-plot(res$llk,type='l')
-nburn=400
-seq1=nburn:length(res$llk)
-plot(res$llk[seq1],type='l')
-# phi=res$phi[seq1,]
-# setwd('U:\\GIT_models\\git_LDA_MS')
-# write.csv(phi,'phi.csv',row.names=F)
+#export phi
+tmp=matrix(1:(ncomm.init*nspp),ncomm.init,nspp)
+ind1=tmp[-seq1,] #indicators for superfluous groups
+write.csv(res$phi[seq.conv,-ind1],'phi step1.csv',row.names=F)
+
 #------------------------------------------------------------------
 #are the estimate phi's good?
-tmp=res$phi[length(res$llk),]
-phi=matrix(tmp,ncomm.init,nspp)
-phi1=phi[1:ncomm,]
-
 ordem=numeric()
 for (i in 1:ncomm){
   tmp=rep(0,ncomm)
@@ -89,15 +83,11 @@ for (i in 1:ncomm){
   ind=which(tmp==max(tmp))
   ordem=c(ordem,ind)
 }
-rango=range(c(phi.true,phi1))
+rango=range(c(phi.true,phi1[ordem,]))
 plot(phi.true,phi1[ordem,],xlim=rango,ylim=rango)
 lines(rango,rango,col='red')
 
 #are the estimate theta's good?
-array.lsk.init=res$array.lsk
-nlk=apply(array.lsk.init,c(1,3),sum)
-theta=nlk/apply(nlk,1,sum)
-
-rango=range(c(theta.true,theta))
-plot(theta.true,theta[,ordem],xlim=rango,ylim=rango)
+rango=range(c(theta.true,theta1))
+plot(theta.true,theta1[,ordem],xlim=rango,ylim=rango)
 lines(rango,rango,col='red')

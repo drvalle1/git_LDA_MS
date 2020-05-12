@@ -2,7 +2,7 @@ library(MCMCpack)
 library('coda')
 
 plot(res$llk[1:ngibbs],type='l')
-nburn=900
+nburn=100
 plot(res$llk[nburn:ngibbs],type='l')
 #calculate effective sample size
 effectiveSize(mcmc(res$betas[nburn:ngibbs,]))

@@ -17,6 +17,9 @@ tmp=read.csv('array lsk.csv',as.is=T)
 ncomm=length(tmp$V1)/(nspp*nloc); ncomm
 array.lsk.init=array(tmp$V1,dim=c(nloc,nspp,ncomm))
 
+#get phi
+phi.init=data.matrix(read.csv('phi step1.csv',as.is=T))
+
 #basic settings
 ngibbs=1000
 nburn=ngibbs/2
@@ -39,6 +42,6 @@ sourceCpp('slice_NBN.cpp')
 
 res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,nburn=nburn,y=y,xmat=xmat,
                   phi.prior=phi.prior,array.lsk.init=array.lsk.init,
-                  var.betas=var.betas)
+                  var.betas=var.betas,phi.init=phi.init)
 plot(res$llk,type='l')
 plot(res$fmodel,type='l')

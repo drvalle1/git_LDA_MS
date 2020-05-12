@@ -1,10 +1,10 @@
 rm(list=ls(all=TRUE))
 library(MCMCpack)
-set.seed(139)
+set.seed(201)
 
 nloc=2000
-nspp=150
-ncommun=3
+nspp=200
+ncommun=4
 
 #design matrix
 xmat=matrix(runif(nloc*ncommun,min=-1,max=3),nloc,ncommun)
@@ -31,7 +31,7 @@ head(media)
 #generate N_lk
 par(mfrow=c(1,1),mar=rep(4,4))
 nlk=matrix(NA,nloc,ncommun)
-NBN=10 #when this is large, we get into areas with relatively flat loglikel, giving trouble to the slice sampler
+NBN=20 #when this is large, we get into areas with relatively flat loglikel, giving trouble to the slice sampler
 for (i in 1:ncommun){
   nlk[,i]=rnbinom(nloc,mu=media[,i],size=NBN)
 }
@@ -48,7 +48,7 @@ plot(media,nlk)
 #generate phi:
 #- assume that each species is strongly present in a single group
 #- Avoid very rare species (species that are almost never present)
-tmp=matrix(0,ncommun,nspp)
+tmp=matrix(0.05,ncommun,nspp)
 base=nspp/ncommun
 margin1=floor(base*0.2)
 seq1=c(seq(from=1,to=nspp,by=base),nspp-margin1)
