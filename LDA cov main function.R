@@ -16,8 +16,12 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
     colnames(dat.tmp)=rep('',ncol(dat.tmp)) #this is important otherwise next line breaks when we only have a single covariate
     colnames(dat.tmp)[1]='y'
     dat.tmp1=as.data.frame(dat.tmp)
-    res=glm.nb(y ~ ., data = dat.tmp1)
-    # res=glm(y~.,data=dat.tmp1,family='poisson')
+    res=try(glm.nb(y ~ ., data = dat.tmp1),silent=T)
+    
+    #if we run into an error using NB regression, use Poisson reg
+    ind=grep('Error',res)
+    if (length(ind)>0) res=glm(y~.,data=dat.tmp1,family='poisson')
+    
     betas[,i]=res$coef
   }
   options(warn=2)
@@ -26,7 +30,6 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
   # phi=nks/apply(nks,1,sum); apply(phi,1,sum)
   phi=matrix(phi.init[1,],ncomm,nspp)
   phi.nrow=nrow(phi.init)
-  oo=1
   NBN=10
   
   #to store outcomes from gibbs sampler
@@ -61,11 +64,8 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
                       LoThresh=LoThresh)
 
     #sample phi
-    if (oo< phi.nrow){
-      phi=matrix(phi.init[oo,],ncomm,nspp)
-      oo=oo+1
-    }
-    if (oo>= phi.nrow) oo=1
+    oo=sample(phi.nrow,size=1)
+    phi=matrix(phi.init[oo,],ncomm,nspp)
     # phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
     # phi=phi.true
 
