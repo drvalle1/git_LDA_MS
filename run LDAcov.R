@@ -14,8 +14,8 @@ nspp=ncol(y)
 
 #get array.lsk
 tmp=read.csv('array lsk.csv',as.is=T)
-ncomm=length(tmp$V1)/(nspp*nloc); ncomm
-array.lsk.init=array(tmp$V1,dim=c(nloc,nspp,ncomm))
+ncomm.init=length(tmp$V1)/(nspp*nloc); ncomm.init
+array.lsk.init=array(tmp$V1,dim=c(nloc,nspp,ncomm.init))
 
 #get phi
 phi.init=data.matrix(read.csv('phi step1.csv',as.is=T))
@@ -30,6 +30,14 @@ var.betas=c(10,rep(10,ncol(xmat)-1))
 gamma=0.1
 
 #----------------------------------------------------------
+#determine optimal number of groups
+
+nlk=apply(array.lsk.init,c(1,3),sum)
+theta1=nlk/apply(nlk,1,sum)
+par(mfrow=c(1,1),mar=c(3,3,1,1))
+boxplot(theta1)
+
+#----------------------------------------------------------
 #LDA with covariates
 
 #get functions
@@ -40,8 +48,14 @@ sourceCpp('LDA_cov_aux1_cpp.cpp')
 sourceCpp('slice_betas.cpp')
 sourceCpp('slice_NBN.cpp')
 
+#re-estimate phi
+ncomm=4
 res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,nburn=nburn,y=y,xmat=xmat,
                   phi.prior=phi.prior,array.lsk.init=array.lsk.init,
-                  var.betas=var.betas,phi.init=phi.init)
-plot(res$llk,type='l')
-plot(res$fmodel,type='l')
+                  var.betas=var.betas,estimate.phi=T,
+                  phi.init=phi.init)
+
+#do not re-estimate phi
+res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,nburn=nburn,y=y,xmat=xmat,
+                  phi.prior=phi.prior,array.lsk.init=array.lsk.init,
+                  var.betas=var.betas,phi.init=phi.init,estimate.phi=F)

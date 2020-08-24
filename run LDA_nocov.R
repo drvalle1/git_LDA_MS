@@ -28,49 +28,25 @@ sourceCpp('aux1.cpp')
 
 res=LDA.abundance(y=y,ncomm=ncomm.init,ngibbs=ngibbs,nburn=nburn,psi=psi,gamma=gamma)
 
-nloc=nrow(y)
-nspp=ncol(y)
-array.lsk.init=res$array.lsk
-phi1=matrix(res$phi[nrow(res$phi),],ncomm.init,ncol(y))
-
 #look at convergence
 plot(res$llk,type='l')
 seq.conv=350:length(res$llk)
 plot(res$llk[seq.conv],type='l')
 
-#determine optimal number of groups
-nlk=apply(array.lsk.init,c(1,3),sum)
-theta1=nlk/apply(nlk,1,sum)
-par(mfrow=c(1,1),mar=c(3,3,1,1))
-boxplot(theta1)
-ncomm=4
-seq1=1:ncomm
-sum(nlk[,seq1]/sum(nlk))
-
-#re-distribute individuals within array.lsk.init that are in eliminated communities
-array.lsk=array.lsk.init[,,seq1]
-for (i in 1:nloc){
-  for (j in 1:nspp){
-    tmp=array.lsk.init[i,j,-seq1]
-    n=sum(tmp)
-    if (n>0){
-      prob=theta1[i,seq1]*phi1[seq1,j]
-      prob=prob/sum(prob)
-      z=rmultinom(1,size=n,prob=prob)
-      array.lsk[i,j,]=array.lsk[i,j,]+z
-    }
-  }
-}
+nloc=nrow(y)
+nspp=ncol(y)
+array.lsk.init=res$array.lsk
+phi1=matrix(res$phi[nrow(res$phi),],ncomm.init,ncol(y))
 
 #export array.lsk
 setwd('U:\\GIT_models\\git_LDA_MS')
-dat1=matrix(array.lsk,nloc*nspp*ncomm,1)
-write.csv(dat1,'array lsk.csv',row.names=F)
+array.lsk=matrix(array.lsk.init,nloc*nspp*ncomm.init,1)
+write.csv(array.lsk,'array lsk.csv',row.names=F)
 
 #export phi
 tmp=matrix(1:(ncomm.init*nspp),ncomm.init,nspp)
-ind1=tmp[-seq1,] #indicators for superfluous groups
-write.csv(res$phi[seq.conv,-ind1],'phi step1.csv',row.names=F)
+# ind1=tmp[-seq1,] #indicators for superfluous groups
+write.csv(res$phi[seq.conv,],'phi step1.csv',row.names=F)
 
 #------------------------------------------------------------------
 #are the estimate phi's good?

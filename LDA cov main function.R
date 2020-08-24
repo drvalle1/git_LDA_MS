@@ -1,13 +1,42 @@
 gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
-                       var.betas,phi.init){
+                       var.betas,phi.init,estimate.phi){
   #basic settings
   nparam=ncol(xmat)
   nloc=nrow(y)
   nspp=ncol(y)
   ntot=apply(y,1,sum)
   
+  #get phi by eliminating superfluous groups
+  ncomm.init=ncol(phi.init)/nspp
+  tmp=matrix(1:(ncomm.init*nspp),ncomm.init,nspp)
+  seq1=1:ncomm
+  ind1=tmp[-seq1,] #indicators for superfluous groups
+  phi.mat=phi.init[,-ind1]
+  phi.nrow=nrow(phi.mat)
+  if (!estimate.phi) phi=matrix(phi.mat[1,],ncomm,nspp)
+  if (estimate.phi)  phi=matrix(phi.mat[phi.nrow,],ncomm,nspp)
+
+  #get theta
+  nlk=apply(array.lsk.init,c(1,3),sum)
+  theta1=nlk/apply(nlk,1,sum)
+  
+  #re-distribute individuals within array.lsk.init that are in eliminated communities
+  seq1=1:ncomm
+  array.lsk=array.lsk.init[,,seq1]
+  for (i in 1:nloc){
+    for (j in 1:nspp){
+      tmp=array.lsk.init[i,j,-seq1]
+      n=sum(tmp)
+      if (n>0){
+        prob=theta1[i,seq1]*phi[seq1,j]
+        prob=prob/sum(prob)
+        z=rmultinom(1,size=n,prob=prob)
+        array.lsk[i,j,]=array.lsk[i,j,]+z
+      }
+    }
+  }
+
   #initial values
-  array.lsk=array.lsk.init
   nlk=apply(array.lsk,c(1,3),sum)
   betas=matrix(0,nparam,ncomm)
   options(warn=-1) #sometimes I get "glm.fit: fitted rates numerically 0 occurred" here
@@ -28,8 +57,6 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
   nks=t(apply(array.lsk,2:3,sum))
   nk=rowSums(nks)
   # phi=nks/apply(nks,1,sum); apply(phi,1,sum)
-  phi=matrix(phi.init[1,],ncomm,nspp)
-  phi.nrow=nrow(phi.init)
   NBN=10
   
   #to store outcomes from gibbs sampler
@@ -64,9 +91,11 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
                       LoThresh=LoThresh)
 
     #sample phi
-    oo=sample(phi.nrow,size=1)
-    phi=matrix(phi.init[oo,],ncomm,nspp)
-    # phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
+    if (estimate.phi)  phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
+    if (!estimate.phi){
+      oo=sample(phi.nrow,size=1)
+      phi=matrix(phi.mat[oo,],ncomm,nspp)
+    } 
     # phi=phi.true
 
     #sample z
