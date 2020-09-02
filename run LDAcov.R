@@ -50,12 +50,12 @@ sourceCpp('slice_NBN.cpp')
 
 #re-estimate phi
 ncomm=4
-res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,nburn=nburn,y=y,xmat=xmat,
+res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,y=y,xmat=xmat,
                   phi.prior=phi.prior,array.lsk.init=array.lsk.init,
                   var.betas=var.betas,estimate.phi=T,
                   phi.init=phi.init)
 
 #do not re-estimate phi
-res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,nburn=nburn,y=y,xmat=xmat,
+res=gibbs.LDA.cov(ncomm=ncomm,ngibbs=ngibbs,y=y,xmat=xmat,
                   phi.prior=phi.prior,array.lsk.init=array.lsk.init,
                   var.betas=var.betas,phi.init=phi.init,estimate.phi=F)
