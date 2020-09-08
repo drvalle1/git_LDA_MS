@@ -13,8 +13,7 @@ gibbs.LDA.cov=function(ncomm,ngibbs,y,xmat,phi.prior,array.lsk.init,
   ind1=tmp[-seq1,] #indicators for superfluous groups
   phi.mat=phi.init[,-ind1]
   phi.nrow=nrow(phi.mat)
-  if (!estimate.phi) phi=matrix(phi.mat[1,],ncomm,nspp)
-  if (estimate.phi)  phi=matrix(phi.mat[phi.nrow,],ncomm,nspp)
+  phi=matrix(phi.mat[phi.nrow,],ncomm,nspp)
 
   #get theta
   nlk=apply(array.lsk.init,c(1,3),sum)
@@ -96,7 +95,6 @@ gibbs.LDA.cov=function(ncomm,ngibbs,y,xmat,phi.prior,array.lsk.init,
       oo=sample(phi.nrow,size=1)
       phi=matrix(phi.mat[oo,],ncomm,nspp)
     } 
-    # phi=phi.true
 
     #sample z
     media=exp(xmat%*%betas) #get mean
@@ -106,10 +104,8 @@ gibbs.LDA.cov=function(ncomm,ngibbs,y,xmat,phi.prior,array.lsk.init,
                       y=y,LogPhi=log(phi),LogOneMinusP=log(1-NBP),
                       runif1=runif(sum(y)),nlk=nlk)
     array.lsk=tmp$ArrayLSK
-    # array.lsk=array.lsk.true
-
     nlk=apply(array.lsk,c(1,3),sum)
-    # nks=t(apply(array.lsk,2:3,sum))
+    nks=t(apply(array.lsk,2:3,sum))
     nk=rowSums(nks)
     
     #calculate NB probabilities
